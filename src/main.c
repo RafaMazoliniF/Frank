@@ -1,16 +1,18 @@
 #include "lexical.h"
 
 int main() {
-    char *filename = "res.txt";
+    FILE * file = getFile("test.txt");
 
-    char * word = "inteiro";
-    save_token(word, filename);
+    char * word = get_next_word(file);
+    while (word != NULL) {
+        if (strcmp(word, "{") == 0) {
+            handle_comment(file);
+            word = get_next_word(file);
+        }
 
-    char * word1 = "var";
-    save_token(word1, filename);
-
-    char * word2 = ">";
-    save_token(word2, filename);
+        save_token(word, "res.txt");
+        word = get_next_word(file);
+    }
 
     return 0;
 }

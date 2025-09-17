@@ -2,6 +2,9 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <ctype.h>
+
+#define WORD_MAX_LEN 40
 
 typedef enum {
     SPROGRAMA,          // programa
@@ -46,5 +49,10 @@ typedef enum {
 } Simbolo;
 
 
+FILE *getFile(char *filename);
+char get_next_char(FILE * file);
+char * get_next_word(FILE * file);
+void handle_comment(FILE * file);
+bool isWordValid(const char *word);
 int get_symbol(char * word);
 bool save_token(char * lexeme, char * filename);
