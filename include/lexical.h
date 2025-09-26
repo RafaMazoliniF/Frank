@@ -48,7 +48,6 @@ typedef enum {
     SNAO                // nao
 } Simbolo;
 
-
 FILE *getFile(char *filename);
 char get_next_char(FILE * file);
 char * get_next_word(FILE * file);
