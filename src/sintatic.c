@@ -1,95 +1,155 @@
 #include "sintatic.h"
 
-bool handle_simple_expression() {
-    if (current_token.symbol != SMAIS && current_token.symbol != SMENOS && !handle_term()) {
-        printf("Simple expression must initiate with \'+\', \'-\' or \"term\"\n");
-        return false;
-    } 
-
-    if (current_token.symbol == SMAIS || current_token.symbol == SMENOS) {
-        get_next_token();
-
-        if (!handle_term()) {
-            printf("Simple expression initiated with \'+\' or \'-\' must be followed by \"term\"\n");
-            return false;
-        }
-    } 
-
-    while (1) {
-        get_next_token();
-        if (current_token.symbol != SMAIS && current_token.symbol != SMENOS && current_token.symbol != SOU) {
-            return true;
-        } else {
-            get_next_token();
-            if (!handle_term()) {
-                printf("Simple expression with multiple terms must be followed by \'+\', \'-\'or \'or\', then \"term\"\n");
-                return false;
-            }
-        }
+// <atribuição_chprocedimento>::= (<comando atribuicao>| <chamada de procedimento>)
+void assignment_or_procedure_call() {
+    if (current_token.symbol != SIDENTIFICADOR) {
+        error("Expected identifier");
+    }
+    
+    get_next_token();
+    
+    if (current_token.symbol == SATRIBUICAO) {
+        assignment_command();
+    } else {
+        procedure_call();
     }
 }
 
-bool handle_term() {
-    if (!handle_factor()) {
-        printf("Term must initiate with a valid \"factor\"\n");
-        return false;
-    } 
+// <comando atribuicao>::= <identificador> := <expressão>
+void assignment_command() {
+    if (current_token.symbol != SIDENTIFICADOR) {
+        error("Expected identifier");
+    }
+    get_next_token();
+    
+    if (current_token.symbol != SATRIBUICAO) {
+        error("Expected ':='");
+    }
+    get_next_token();
+    
+    expression();
+}
 
-    while (1) {
+// <chamada de procedimento>::= <identificador>
+void procedure_call() {
+    if (current_token.symbol != SIDENTIFICADOR) {
+        error("Expected identifier");
+    }
+    get_next_token();
+}
+
+// <comando condicional>::= se <expressão> entao <comando> [senao <comando>]
+void conditional_command() {
+    if (current_token.symbol != SSE) {
+        error("Expected 'if'");
+    }
+    get_next_token();
+    
+    expression();
+    
+    if (current_token.symbol != SENTAO) {
+        error("Expected 'then'");
+    }
+    get_next_token();
+    
+    command();
+    
+    if (current_token.symbol == SSENAO) {
         get_next_token();
-        if (current_token.symbol != SMULT && current_token.symbol != SDIV && current_token.symbol != SE ) {
-            return true;
-        } else {
-            get_next_token();
-            if (!handle_factor()) {
-                printf("Term with multiple \"factor\" must be followed by \'*\', \'div\' or \'e\', then a valid \"factor\"\n");
-                return false;
-            }
-        }
+        command();
     }
 }
 
-bool handle_factor() {
-    if (handle_variable() ||
-        handle_number() ||
-        handle_function_call() ||
-        current_token.symbol == SVERDADEIRO ||
-        current_token.symbol == SFALSO
-    ) {
-        return true;
+// <comando enquanto>::= enquanto <expressão> faca <comando>
+void while_command() {
+    if (current_token.symbol != SENQUANTO) {
+        error("Expected 'while'");
     }
-
-    if (current_token.symbol == SABRE_PARENTESES) {
-        get_next_token();
-        if (!handle_expression()) {
-            return false;
-        } else {
-            get_next_token();
-            return current_token.symbol == SFECHA_PARENTESES;
-        }
+    get_next_token();
+    
+    expression();
+    
+    if (current_token.symbol != SFACA) {
+        error("Expected 'do'");
     }
-
-    if (current_token.symbol = SNAO) {
-        get_next_token();
-        return handle_factor();
-    }
-
-
-    return false;
+    get_next_token();
+    
+    command();
 }
 
-bool handle_variable() {
-    if(current_token.symbol == SIDENTIFICADOR) {
-        return isWordValid(current_token.lexem);
+// <comando leitura>::= leia ( <identificador> )
+void read_command() {
+    if (current_token.symbol != SLEIA) {
+        error("Expected 'read'");
     }
-
-    return false;
+    get_next_token();
+    
+    if (current_token.symbol != SABRE_PARENTESES) {
+        error("Expected '('");
+    }
+    get_next_token();
+    
+    if (current_token.symbol != SIDENTIFICADOR) {
+        error("Expected identifier");
+    }
+    get_next_token();
+    
+    if (current_token.symbol != SFECHA_PARENTESES) {
+        error("Expected ')'");
+    }
+    get_next_token();
 }
 
-bool handle_function_call() {
-    if(current_token.symbol == SIDENTIFICADOR) {
-        return isWordValid(current_token.lexem);
+// <comando escrita>::= escreva ( <identificador> )
+void write_command() {
+    if (current_token.symbol != SESCREVA) {
+        error("Expected 'write'");
     }
+    get_next_token();
+    
+    if (current_token.symbol != SABRE_PARENTESES) {
+        error("Expected '('");
+    }
+    get_next_token();
+    
+    if (current_token.symbol != SIDENTIFICADOR) {
+        error("Expected identifier");
+    }
+    get_next_token();
+    
+    if (current_token.symbol != SFECHA_PARENTESES) {
+        error("Expected ')'");
+    }
+    get_next_token();
+}
 
-    return false;
+// <expressão>::= <expressão simples> [<operador relacional><expressão simples>]
+void expression() {
+    simple_expression();
+    
+    if (current_token.symbol == SDIF ||
+        current_token.symbol == SIG ||
+        current_token.symbol == SMENOR ||
+        current_token.symbol == SMENORIG ||
+        current_token.symbol == SMAIOR ||
+        current_token.symbol == SMAIORIG) {
+        
+        relational_operator();
+        simple_expression();
+    }
+}
+
+// <operador relacional>::= (!= | = | < | <= | > | >=)
+void relational_operator() {
+    if (current_token.symbol == SDIF ||
+        current_token.symbol == SIG ||
+        current_token.symbol == SMENOR ||
+        current_token.symbol == SMENORIG ||
+        current_token.symbol == SMAIOR ||
+        current_token.symbol == SMAIORIG) {
+        
+        get_next_token();
+    } else {
+        error("Expected relational operator(!= | = | < | <= | > | >=)");
+    }
 }

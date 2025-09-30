@@ -13,10 +13,12 @@ typedef struct Token {
 Token current_token;
 void get_next_token();
 
-bool handle_simple_expression();
-bool handle_term();
-bool handle_factor();
-bool handle_variable();
-bool handle_function_call();
-bool handle_identifier();
-bool handle_number();
+void assignment_or_procedure_call();
+void assignment_command();
+void procedure_call();
+void conditional_command();
+void while_command();
+void read_command();
+void write_command();
+void expression();
+void relational_operator();
