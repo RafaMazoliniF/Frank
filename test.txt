@@ -1,0 +1,4 @@
+programa nome_programa;
+inicio
+   { Este é um bloco de comando vazio }
+fim.
