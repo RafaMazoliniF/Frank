@@ -2,6 +2,11 @@
 #define SYNTACTIC_H
 
 #include "lexical.h"
+#include <string.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <ctype.h>
 
 void parser(FILE *filename);
 
@@ -24,5 +29,20 @@ void parse_expression();
 void parse_simple_expression();
 void parse_term();
 void parse_factor();
+bool handle_simple_expression();
+bool handle_term();
+bool handle_factor();
+bool handle_variable();
+bool handle_function_call();
+bool handle_identifier();
+bool handle_number();
+
+typedef struct Token {
+    Simbolo symbol;
+    char * lexem;
+} Token;
+
+Token current_token;
+void get_next_token();
 
 #endif
