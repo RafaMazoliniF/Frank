@@ -74,6 +74,7 @@ int get_symbol(char * word){
     if (strcmp(word, "e") == 0) return SE;
     if (strcmp(word, "ou") == 0) return SOU;
     if (strcmp(word, "nao") == 0) return SNAO;
+
     if (isdigit(word[0])) {
         for (int i = 1; i < (int)strlen(word); i++) {
             if (!isdigit(word[i])) {
@@ -244,4 +245,27 @@ void handle_comment(FILE * file) {
         
         free(next_word);
     } while (next_word != NULL);
+}
+
+Token get_next_token(FILE *file) {
+    Token token;
+
+    char *word = get_next_word(file);
+
+    if (word == NULL) {
+        token.lexeme = NULL;
+        token.symbol = -1;
+        return token;
+    }
+
+    if (strcmp(word, "{") == 0) {
+        free(word);
+        handle_comment(file);
+        return get_next_token(file); 
+    }
+
+    token.lexeme = word;
+    token.symbol = get_symbol(word);
+
+    return token;
 }

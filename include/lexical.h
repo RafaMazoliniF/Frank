@@ -48,10 +48,10 @@ typedef enum {
     SNAO                // nao
 } Simbolo;
 
+
 FILE *getFile(char *filename);
 char get_next_char(FILE * file);
 char * get_next_word(FILE * file);
 void handle_comment(FILE * file);
 bool isWordValid(const char *word);
 int get_symbol(char * word);
-bool save_token(char * lexeme, char * filename);
