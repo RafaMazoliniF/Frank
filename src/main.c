@@ -1,9 +1,8 @@
-#include "sintatico.h"
+#include "sintatic.h"
 
 int main() {
-    FILE *file = getFile("test.txt");
-
-    parser(file);
+    getFile("test.txt");
+    handler();
 
     fclose(file);
 

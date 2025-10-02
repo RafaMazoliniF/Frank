@@ -1,453 +1,392 @@
 #include "sintatic.h"
 
-// <atribuição_chprocedimento>::= (<comando atribuicao>| <chamada de procedimento>)
-void assignment_or_procedure_call() {
-    if (current_token.symbol != SIDENTIFICADOR) {
-        error("Expected identifier");
+void print_error(const char *expected, const char *context) {
+    fprintf(stderr, "\n=== ERRO SINTÁTICO ===\n");
+    fprintf(stderr, "Contexto: %s\n", context);
+    fprintf(stderr, "Esperado: %s\n", expected);
+    fprintf(stderr, "Encontrado: ");
+    
+    if (current_token.lexem != NULL) {
+        fprintf(stderr, "'%s' (símbolo: %d)\n", current_token.lexem, current_token.symbol);
+    } else {
+        fprintf(stderr, "EOF (fim de arquivo)\n");
     }
     
+    fprintf(stderr, "=====================\n\n");
+    exit(EXIT_FAILURE);
+}
+
+// Macro para simplificar chamadas de erro
+#define ERROR(expected, context) print_error(expected, context)
+
+void handler() {
     get_next_token();
-    
-    if (current_token.symbol == SATRIBUICAO) {
-        assignment_command();
-    } else {
-        procedure_call();
+    handle_program();
+}
 
-static FILE *file;
-static Token current_token;
-
-void parse_program() {
+// <programa>::= programa <identificador> ; <bloco> .
+void handle_program() {
     if (current_token.symbol == SPROGRAMA) {
-        free(current_token.lexeme);
-        current_token = get_next_token(file);
+        get_next_token();
 
         if (current_token.symbol == SIDENTIFICADOR) {
-            free(current_token.lexeme);
-            current_token = get_next_token(file);
+            get_next_token();
 
             if (current_token.symbol == SPONTO_VIRGULA) {
-                free(current_token.lexeme);
-                current_token = get_next_token(file);
+                get_next_token();
 
-                parse_block();
+                handle_block();
 
                 if (current_token.symbol == SPONTO) {
-                    free(current_token.lexeme);
+                    get_next_token();
                     return;
                 } else {
-                    printf("Devia ser '.'\n");
-                    exit(EXIT_FAILURE);
+                    print_error("'.'", "após bloco do programa");
                 }
 
             } else {
-                printf("Devia ser ';'\n");
-                exit(EXIT_FAILURE);
+                print_error("';'", "após identificador do programa");
             }
 
         } else {
-            printf("Devia ser um identificador \n");
-            exit(EXIT_FAILURE);
+            print_error("identificador", "após 'programa'");
         }
 
     } else {
-        printf("Devia ser 'programa'\n");
-        exit(EXIT_FAILURE);
+        print_error("'programa'", "início do arquivo");
     }
 }
 
-void parse_block() {
-    free(current_token.lexeme);
-    current_token = get_next_token(file);
-
-    parse_variable_declaration_section();
-    parse_subroutine_section();
-    parse_commands();
-
-    return true;
+// <bloco>::= [<etapa de declaração de variáveis>]
+//            [<etapa de declaração de sub-rotinas>]
+//            <comandos>
+void handle_block() {
+    handle_variable_declaration_section();
+    handle_subroutine_section();
+    handle_commands();
 }
 
-void parse_variable_declaration_section(){
+// <etapa de declaração de variáveis>::= var <declaração de variáveis> ;
+//                                           {<declaração de variáveis>;}
+void handle_variable_declaration_section(){
     if (current_token.symbol == SVAR) {
-        free(current_token.lexeme);
-        current_token = get_next_token(file);
+    
+        get_next_token();
 
         if (current_token.symbol == SIDENTIFICADOR) {
             while (current_token.symbol == SIDENTIFICADOR) {
-                parse_variables(); 
+                handle_variables(); 
 
                 if (current_token.symbol == SPONTO_VIRGULA) {
-                    free(current_token.lexeme);
-                    current_token = get_next_token(file);
+                    get_next_token();
                 } else {
-                    printf("Devia ser ';'\n");
-                    exit(EXIT_FAILURE);
+                    print_error("';'", "após declaração de variáveis");
                 }
             }
 
         } else {
-            printf("Devia ser um identificador\n");
-            exit(EXIT_FAILURE);
+            print_error("identificador", "após 'var'");
         }
     }
 }
 
-void parse_variables() {
+// <declaração de variáveis>::= <identificador> {, <identificador>} : <tipo>
+void handle_variables() {
     if (current_token.symbol != SIDENTIFICADOR) {
-        printf("Devia ser um identificador\n");
-        exit(EXIT_FAILURE);
+        print_error("identificador", "declaração de variáveis");
     }
 
     while (current_token.symbol == SIDENTIFICADOR) {
-        free(current_token.lexeme);
-        current_token = get_next_token(file);
+    
+        get_next_token();
 
         if (current_token.symbol == SVIRGULA) {
-            free(current_token.lexeme);
-            current_token = get_next_token(file);
+        
+            get_next_token();
 
             if (current_token.symbol == SDOISPONTOS) {
-                printf("Devia ser ':'\n");
-                exit(EXIT_FAILURE);
+                print_error("identificador", "após ',' em declaração de variáveis");
             }
 
         } else if (current_token.symbol == SDOISPONTOS) {
             break; 
         } else {
-            printf("Devia ser ',' ou ':'\n");
-            exit(EXIT_FAILURE);
+            print_error("',' ou ':'", "em declaração de variáveis");
         }
     }
 
-    free(current_token.lexeme);
-    current_token = get_next_token(file);
-    parse_type();
+    get_next_token();
+    handle_type();
 }
 
-void parse_type() {
+// <tipo> ::= (inteiro | booleano)
+void handle_type() {
     if (current_token.symbol == SINTEIRO || current_token.symbol == SBOOLEANO) {
-        free(current_token.lexeme);
-        current_token = get_next_token(file);
+    
+        get_next_token();
     } else {
-        printf("Devia ser um 'inteiro' ou 'booleano'\n");
-        exit(EXIT_FAILURE);
+        print_error("'inteiro' ou 'booleano'", "tipo de variável");
     }
 }
 
-void parse_subroutine_section() {
+// <etapa de declaração de sub-rotinas> ::= (<declaração de procedimento>;|
+//                                           <declaração de função>;)
+//                                           {<declaração de procedimento>;|
+//                                           <declaração de função>;}
+void handle_subroutine_section() {
     while (current_token.symbol == SPROCEDIMENTO || current_token.symbol == SFUNCAO) {
         if (current_token.symbol == SPROCEDIMENTO) {
-            parse_procedure_declaration();  
+            handle_procedure_declaration();  
         } else if (current_token.symbol == SFUNCAO) {
-            parse_function_declaration();
+            handle_function_declaration();
         }
 
         if (current_token.symbol == SPONTO_VIRGULA) {
-            free(current_token.lexeme);
-            current_token = get_next_token(file);
+            get_next_token();
         } else {
-            printf("Devia ser ';'\n");
-            exit(EXIT_FAILURE);
+            print_error("';'", "após declaração de sub-rotina");
         }
     }
 }
 
-void parse_procedure_declaration() {
+// <declaração de procedimento> ::= procedimento <identificador>;
+//                                               <bloco>
+void handle_procedure_declaration() {
     if (current_token.symbol == SPROCEDIMENTO) {
-        free(current_token.lexeme);
-        current_token = get_next_token(file);
+    
+        get_next_token();
     } else {
-        printf("Devia ser 'procedimento'\n");
-        exit(EXIT_FAILURE);
+        print_error("'procedimento'", "declaração de procedimento");
     }
 
     if (current_token.symbol == SIDENTIFICADOR) {
-        free(current_token.lexeme);
-        current_token = get_next_token(file);
+    
+        get_next_token();
     } else {
-        printf("Devia ser um identificador\n");
-        exit(EXIT_FAILURE);
+        print_error("identificador", "após 'procedimento'");
     }
 
     if (current_token.symbol == SPONTO_VIRGULA) {
-        free(current_token.lexeme);
-        current_token = get_next_token(file);
+    
+        get_next_token();
     } else {
-        printf("DEvia ser ';'\n");
-        exit(EXIT_FAILURE);
+        print_error("';'", "após nome do procedimento");
     }
 
-    parse_block();
+    handle_block();
 }
 
-void parse_function_declaration() {
+// <declaração de função> ::= funcao <identificador>: <tipo>;
+//                                 <bloco>
+void handle_function_declaration() {
     if (current_token.symbol == SFUNCAO) {
-        free(current_token.lexeme);
-        current_token = get_next_token(file);
+    
+        get_next_token();
     } else {
-        printf("Devia ser 'funcao'\n");
-        exit(EXIT_FAILURE);
+        print_error("'funcao'", "declaração de função");
     }
 
     if (current_token.symbol == SIDENTIFICADOR) {
-        free(current_token.lexeme);
-        current_token = get_next_token(file);
+    
+        get_next_token();
     } else {
-        printf("Devia ser um identificadot\n");
-        exit(EXIT_FAILURE);
+        print_error("identificador", "após 'funcao'");
     }
 
     if (current_token.symbol == SDOISPONTOS) {
-        free(current_token.lexeme);
-        current_token = get_next_token(file);
+    
+        get_next_token();
     } else {
-        printf("Devia se ':'\n");
-        exit(EXIT_FAILURE);
+        print_error("':'", "após nome da função");
     }
 
-    parse_type();
+    handle_type();
 
     if (current_token.symbol == SPONTO_VIRGULA) {
-        free(current_token.lexeme);
-        current_token = get_next_token(file);
+    
+        get_next_token();
     } else {
-        printf("Devia der ';'\n");
-        exit(EXIT_FAILURE);
+        print_error("';'", "após tipo de retorno da função");
     }
 
-    parse_block();
+    handle_block();
 }
 
-void parse_commands() {
+// <comandos>::= inicio
+//                  <comando>{;<comando>}[;]
+//               fim
+void handle_commands() {
     if (current_token.symbol == SINICIO) {
-        free(current_token.lexeme);
-        current_token = get_next_token(file);
+    
+        get_next_token();
     } else {
-        printf("Devia ser 'inicio'\n");
-        exit(EXIT_FAILURE);
+        print_error("'inicio'", "bloco de comandos");
     }
 
-    parse_simple_command();
+    handle_command();
 
     while (current_token.symbol == SPONTO_VIRGULA) {
-        free(current_token.lexeme);
-        current_token = get_next_token(file);
+    
+        get_next_token();
 
         if (current_token.symbol == SFIM) {
             break;
         }
-        parse_simple_command();
+        handle_command();
     }
 
     if (current_token.symbol == SFIM) {
-        free(current_token.lexeme);
-        current_token = get_next_token(file);
+    
+        get_next_token();
     } else {
-        printf("Devai ser 'fim'\n");
-        exit(EXIT_FAILURE);
+        print_error("'fim'", "fechamento do bloco de comandos");
     }
 }
 
-void parse_simple_command() {
+// <comando>
+void handle_command() {
     switch (current_token.symbol) {
         case SIDENTIFICADOR:
-            parse_procedure_call();
+            handle_assignment_chprocedure();
             break;
 
         case SSE:
-            parse_if_statement();
+            handle_conditional_command();
             break;
 
         case SENQUANTO:
-            parse_while_statement();
+            handle_while_command();
             break;
 
         case SLEIA:
-            parse_read_statement();
+            handle_read_command();
             break;
 
         case SESCREVA: 
-            parse_write_statement();
+            handle_write_command();
             break;
 
         case SINICIO: 
-            parse_commands();
+            handle_commands();
             break;
 
         default:
-            printf("Erro geral\n");
-            exit(EXIT_FAILURE);
+            print_error("identificador, 'se', 'enquanto', 'leia', 'escreva' ou 'inicio'", "comando");
     }
 }
 
-void parser(FILE *filename) {
-    file = filename;
-    
-    current_token = get_next_token(file);
-    
-    parse_program();
-
-    if (current_token.lexeme != NULL) {
-        printf("Erro");
-        free(current_token.lexeme);
-        exit(EXIT_FAILURE);
-    }
-}
-
-bool handle_simple_expression() {
-    if (current_token.symbol != SMAIS && current_token.symbol != SMENOS && !handle_term()) {
-        printf("Simple expression must initiate with \'+\', \'-\' or \"term\"\n");
-        return false;
-    } 
-
-    if (current_token.symbol == SMAIS || current_token.symbol == SMENOS) {
-        get_next_token();
-
-        if (!handle_term()) {
-            printf("Simple expression initiated with \'+\' or \'-\' must be followed by \"term\"\n");
-            return false;
-        }
-    } 
-
-    while (1) {
-        get_next_token();
-        if (current_token.symbol != SMAIS && current_token.symbol != SMENOS && current_token.symbol != SOU) {
-            return true;
-        } else {
-            get_next_token();
-            if (!handle_term()) {
-                printf("Simple expression with multiple terms must be followed by \'+\', \'-\'or \'or\', then \"term\"\n");
-                return false;
-            }
-        }
-    }
-}
-
-// <comando atribuicao>::= <identificador> := <expressão>
-void assignment_command() {
+// <atribuição_chprocedimento>::= (<comando atribuicao>| <chamada de procedimento>)
+void handle_assignment_chprocedure() {
     if (current_token.symbol != SIDENTIFICADOR) {
-        error("Expected identifier");
+        print_error("identificador", "atribuição ou chamada de procedimento");
     }
+    
     get_next_token();
     
-    if (current_token.symbol != SATRIBUICAO) {
-        error("Expected ':='");
+    if (current_token.symbol == SATRIBUICAO) {
+        get_next_token();
+        handle_expression();
     }
-    get_next_token();
-    
-    expression();
+    // Se não for atribuição, é uma chamada de procedimento (já consumimos o identificador)
 }
 
 // <chamada de procedimento>::= <identificador>
-void procedure_call() {
+void handle_procedure_call() {
     if (current_token.symbol != SIDENTIFICADOR) {
-        error("Expected identifier");
+        print_error("identificador", "chamada de procedimento");
     }
     get_next_token();
 }
 
 // <comando condicional>::= se <expressão> entao <comando> [senao <comando>]
-void conditional_command() {
+void handle_conditional_command() {
     if (current_token.symbol != SSE) {
-        error("Expected 'if'");
+        print_error("'se'", "comando condicional");
     }
     get_next_token();
     
-    expression();
+    handle_expression();
     
     if (current_token.symbol != SENTAO) {
-        error("Expected 'then'");
+        print_error("'entao'", "após expressão do 'se'");
     }
     get_next_token();
     
-    command();
+    handle_command();
     
     if (current_token.symbol == SSENAO) {
         get_next_token();
-        command();
+        handle_command();
     }
 }
 
 // <comando enquanto>::= enquanto <expressão> faca <comando>
-void while_command() {
+void handle_while_command() {
     if (current_token.symbol != SENQUANTO) {
-        error("Expected 'while'");
+        print_error("'enquanto'", "comando de repetição");
     }
     get_next_token();
     
-    expression();
+    handle_expression();
     
     if (current_token.symbol != SFACA) {
-        error("Expected 'do'");
+        print_error("'faca'", "após expressão do 'enquanto'");
     }
     get_next_token();
     
-    command();
+    handle_command();
 }
 
 // <comando leitura>::= leia ( <identificador> )
-void read_command() {
+void handle_read_command() {
     if (current_token.symbol != SLEIA) {
-        error("Expected 'read'");
+        print_error("'leia'", "comando de leitura");
     }
     get_next_token();
     
     if (current_token.symbol != SABRE_PARENTESES) {
-        error("Expected '('");
+        print_error("'('", "após 'leia'");
     }
     get_next_token();
     
     if (current_token.symbol != SIDENTIFICADOR) {
-        error("Expected identifier");
+        print_error("identificador", "dentro de 'leia(...)'");
     }
     get_next_token();
     
     if (current_token.symbol != SFECHA_PARENTESES) {
-        error("Expected ')'");
+        print_error("')'", "fechamento de 'leia'");
     }
     get_next_token();
 }
 
 // <comando escrita>::= escreva ( <identificador> )
-void write_command() {
+void handle_write_command() {
     if (current_token.symbol != SESCREVA) {
-        error("Expected 'write'");
+        print_error("'escreva'", "comando de escrita");
     }
     get_next_token();
     
     if (current_token.symbol != SABRE_PARENTESES) {
-        error("Expected '('");
+        print_error("'('", "após 'escreva'");
     }
     get_next_token();
     
     if (current_token.symbol != SIDENTIFICADOR) {
-        error("Expected identifier");
+        print_error("identificador", "dentro de 'escreva(...)'");
     }
     get_next_token();
     
     if (current_token.symbol != SFECHA_PARENTESES) {
-        error("Expected ')'");
+        print_error("')'", "fechamento de 'escreva'");
     }
     get_next_token();
 }
 
 // <expressão>::= <expressão simples> [<operador relacional><expressão simples>]
-void expression() {
-    simple_expression();
+void handle_expression() {
+    handle_simple_expression();
     
-    if (current_token.symbol == SDIF ||
-        current_token.symbol == SIG ||
-        current_token.symbol == SMENOR ||
-        current_token.symbol == SMENORIG ||
-        current_token.symbol == SMAIOR ||
-        current_token.symbol == SMAIORIG) {
-        
-        relational_operator();
-        simple_expression();
-    }
-}
-
-// <operador relacional>::= (!= | = | < | <= | > | >=)
-void relational_operator() {
     if (current_token.symbol == SDIF ||
         current_token.symbol == SIG ||
         current_token.symbol == SMENOR ||
@@ -456,10 +395,65 @@ void relational_operator() {
         current_token.symbol == SMAIORIG) {
         
         get_next_token();
-    } else {
-        error("Expected relational operator(!= | = | < | <= | > | >=)");
+        handle_simple_expression();
     }
 }
 
-    return false;
+// <expressão simples> ::= [ + | - ] <termo> {( + | - | ou) <termo> }
+void handle_simple_expression() {
+    if (current_token.symbol == SMAIS || current_token.symbol == SMENOS) {
+        get_next_token();
+    }
+    
+    handle_term();
+
+    while(current_token.symbol == SMAIS || current_token.symbol == SMENOS || current_token.symbol == SOU) {
+        get_next_token();
+        handle_term();
+    }   
+}
+
+// <termo>::= <fator> {(* | div | e) <fator>}
+void handle_term() {
+    handle_factor();
+
+    while(current_token.symbol == SMULT || current_token.symbol == SDIV || current_token.symbol == SE) {
+        get_next_token();
+        handle_factor();
+    }
+}
+
+// <fator> ::= (<variável> |
+//              <número> |
+//              <chamada de função> |
+//              (<expressão>) | verdadeiro | falso |
+//              nao <fator>)
+void handle_factor() {
+    if (current_token.symbol == SIDENTIFICADOR || 
+        current_token.symbol == SNUMERO || 
+        current_token.symbol == SVERDADEIRO ||
+        current_token.symbol == SFALSO
+    ) {
+        get_next_token();
+        return;
+    }
+
+    if (current_token.symbol == SNAO) {
+        get_next_token();
+        handle_factor();
+        return;  
+    } 
+
+    if (current_token.symbol == SABRE_PARENTESES) {
+        get_next_token();
+        handle_expression();
+        
+        if (current_token.symbol != SFECHA_PARENTESES) {
+            print_error("')'", "fechamento de expressão entre parênteses");
+        }
+        get_next_token();
+        return;
+    }
+    
+    print_error("identificador, número, 'verdadeiro', 'falso', 'nao' ou '('", "fator em expressão");
 }

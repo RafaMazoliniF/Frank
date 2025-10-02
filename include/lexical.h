@@ -1,3 +1,6 @@
+#ifndef LEXICAL_H
+#define LEXICAL_H
+
 #include <string.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -48,10 +51,21 @@ typedef enum {
     SNAO                // nao
 } Simbolo;
 
+typedef struct Token {
+    Simbolo symbol;
+    char * lexem;
+} Token;
 
-FILE *getFile(char *filename);
-char get_next_char(FILE * file);
-char * get_next_word(FILE * file);
-void handle_comment(FILE * file);
+extern FILE * file;
+
+void getFile(char *filename);
+char get_next_char();
+char * get_next_word();
+void handle_comment();
 bool isWordValid(const char *word);
 int get_symbol(char * word);
+void get_next_token();
+
+extern Token current_token;
+
+#endif
