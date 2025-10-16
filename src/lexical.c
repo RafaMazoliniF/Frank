@@ -1,13 +1,14 @@
 #include "lexical.h"
 
-FILE *getFile(char *filename) {
-    FILE *file = fopen(filename, "r");  
+FILE *file = NULL;
+Token current_token = {0};
+
+void getFile(char *filename) {
+    file = fopen(filename, "r");  
 
     if (file == NULL) {
         exit(EXIT_FAILURE);  
     }
-
-    return file;
 }
 
 bool isWordValid(const char *word) {
@@ -74,58 +75,21 @@ int get_symbol(char * word){
     if (strcmp(word, "e") == 0) return SE;
     if (strcmp(word, "ou") == 0) return SOU;
     if (strcmp(word, "nao") == 0) return SNAO;
+
     if (isdigit(word[0])) {
         for (int i = 1; i < (int)strlen(word); i++) {
             if (!isdigit(word[i])) {
                 return SIDENTIFICADOR;
             }
         }
+    } else {
+        return SIDENTIFICADOR;
     }
 
     return SNUMERO;
 }
 
 
-/**
- * @brief Salva o token em um arquivo auxiliar
- * 
- * Salva um token em um arquivo auxiliar no formato <lexema> <simbolo>
- * 
- * @param lexeme lexema a ser identificado e armazenado
- * @param filename arquivo auxiliar que armazena os tokens
- * @return true se sucesso, false caso houve falha
- */
-bool save_token(char * lexeme, char * filename) {
-
-    FILE *file = fopen(filename, "a");
-
-    if (file == NULL) {
-        printf("Erro: não foi possível abrir o arquivo %s\n", filename);
-        exit(EXIT_FAILURE);  
-    }
-
-    if (lexeme == NULL || file == NULL) {
-        return false;
-    }
-    
-    int symbol = get_symbol(lexeme);
-    if (symbol == SIDENTIFICADOR && !isWordValid(lexeme)) {
-        printf("identificador invalido: \'%s\'\n", lexeme);
-        exit(EXIT_FAILURE);
-    }
-
-    int result = fprintf(file, "%s %d\n", lexeme, symbol);
-    
-    fflush(file);
-    fclose(file);
-    
-    if (result < 0) {
-        printf("Erro ao escrever no arquivo\n");
-        return false;
-    }
-    
-    return true;
-}
 
 /**
  * @brief captura o próximo caracter de um dado arquivo
@@ -133,7 +97,7 @@ bool save_token(char * lexeme, char * filename) {
  * @param file arquivo com permissão de leitura
  * @return ponteiro para o caracter, NULL se houve falha
  */
-char get_next_char(FILE * file) {
+char get_next_char() {
     int c = fgetc(file);
     if (c == EOF) return '\0'; 
     return (char)c;
@@ -166,7 +130,7 @@ char* ensure_buffer_capacity(char* buffer, int* capacity, int length) {
  * @param file arquivo com permissão de leitura
  * @return ponteiro para o caracter, NULL se houve falha
  */
-char * get_next_word(FILE * file) {
+char * get_next_word() {
     int capacity = 16;     
     int length = 0;        
     char *buffer = malloc(capacity);
@@ -228,7 +192,7 @@ char * get_next_word(FILE * file) {
     return buffer;
 }
 
-void handle_comment(FILE * file) {
+void handle_comment() {
     char * next_word;
     do {
         next_word = get_next_word(file);
@@ -244,4 +208,28 @@ void handle_comment(FILE * file) {
         
         free(next_word);
     } while (next_word != NULL);
+}
+
+void get_next_token() {
+    Token token;
+
+    char *word = get_next_word(file);
+
+    if (word == NULL) {
+        token.lexem = NULL;
+        token.symbol = -1;
+        current_token = token;
+        return;
+    }
+
+    if (strcmp(word, "{") == 0) {
+        free(word);
+        handle_comment();
+        get_next_token(); 
+    }
+
+    token.lexem = word;
+    token.symbol = get_symbol(word);
+
+    current_token = token;
 }

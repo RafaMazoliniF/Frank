@@ -1,18 +1,10 @@
-#include "lexical.h"
+#include "sintatic.h"
 
 int main() {
-    FILE * file = getFile("test.txt");
+    getFile("sint1.txt");
+    handler();
 
-    char * word = get_next_word(file);
-    while (word != NULL) {
-        if (strcmp(word, "{") == 0) {
-            handle_comment(file);
-            word = get_next_word(file);
-        }
-
-        save_token(word, "res.txt");
-        word = get_next_word(file);
-    }
+    fclose(file);
 
     return 0;
 }
