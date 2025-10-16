@@ -1,7 +1,7 @@
 #include "sintatic.h"
 
 int main() {
-    getFile("test.txt");
+    getFile("sint1.txt");
     handler();
 
     fclose(file);
