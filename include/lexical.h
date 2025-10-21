@@ -1,11 +1,7 @@
 #ifndef LEXICAL_H
 #define LEXICAL_H
 
-#include <string.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <ctype.h>
+#include "includes.h"
 
 #define WORD_MAX_LEN 40
 

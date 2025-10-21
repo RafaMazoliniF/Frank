@@ -1,9 +1,8 @@
+#ifndef SINTATIC_H
+#define SINTATIC_H
+
 #include "lexical.h"
-#include <string.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <ctype.h>
+#include "includes.h"
 
 void handler();
 void handle_program();
@@ -39,3 +38,5 @@ void handle_read_command();
 void handle_write_command();
 void handle_expression();
 void handle_relational_operator();
+
+#endif
