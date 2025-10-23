@@ -12,14 +12,14 @@ SymbolNode * new_symbol_node(char * lexem, bool scope, Type type, unsigned int m
 }
 
 
-void push_symbol_node(SymbolNode * node, SymbolNode * table) {
-    node->next = table;
-    table = node;
+void push_symbol_node(SymbolNode * node, SymbolNode ** table) {
+    node->next = *table;
+    *table = node;
 }
 
-SymbolNode * pop_symbol_node(SymbolNode * table) {
-    SymbolNode * ret = table;
-    table = table->next;
+SymbolNode * pop_symbol_node(SymbolNode ** table) {
+    SymbolNode * ret = *table;
+    *table = (*table)->next;
 
     return ret;
 }

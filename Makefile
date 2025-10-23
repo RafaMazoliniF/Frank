@@ -55,7 +55,7 @@ $(UNITYDIR)/%.o: $(UNITYDIR)/%.c
 
 # Compila e executa os testes
 test: $(TEST_TARGET)
-	./$(TEST_TARGET)
+	./$(TEST_TARGET) 
 
 # Limpar arquivos compilados
 clean:
@@ -64,7 +64,7 @@ clean:
 
 # Executar o programa principal
 run: $(TARGET)
-	./$(TARGET)
+	./$(TARGET) -v
 
 # Recompilar tudo (programa principal)
 rebuild: clean all

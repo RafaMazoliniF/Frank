@@ -18,7 +18,7 @@ typedef struct SymbolNode {
 } SymbolNode;
 
 SymbolNode * new_symbol_node(char * lexem, bool scope, Type type, unsigned int mem);
-void push_symbol_node(SymbolNode * node, SymbolNode * table);
-SymbolNode * pop_symbol_node(SymbolNode * table);
+void push_symbol_node(SymbolNode * node, SymbolNode ** table);
+SymbolNode * pop_symbol_node(SymbolNode ** table);
 
 #endif
