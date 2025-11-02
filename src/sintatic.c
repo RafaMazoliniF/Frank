@@ -347,7 +347,7 @@ void handle_read_command() {
     if (current_token.symbol != SABRE_PARENTESES) {
         print_error("'('", "após 'leia'");
     }
-    get_next_token();
+    get_next_token();  
     
     if (current_token.symbol != SIDENTIFICADOR) {
         print_error("identificador", "dentro de 'leia(...)'");

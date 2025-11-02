@@ -15,15 +15,20 @@ TEST_TARGET = test_runner
 # --- ARQUIVOS FONTE E OBJETO (APLICAÇÃO PRINCIPAL) ---
 SOURCES = $(wildcard $(SRCDIR)/*.c)
 OBJECTS = $(SOURCES:.c=.o)
-
-# CORREÇÃO: Cria uma lista de objetos da aplicação, mas EXCLUINDO o main.o
-# Isso é usado para construir o runner de testes, que tem seu próprio main.
 APP_OBJECTS_NO_MAIN = $(filter-out $(SRCDIR)/main.o, $(OBJECTS))
 
 # --- ARQUIVOS FONTE E OBJETO (TESTES E UNITY) ---
-TEST_SOURCES = $(wildcard $(TESTDIR)/*.c)
-UNITY_SOURCES = $(UNITYDIR)/unity.c
-TEST_OBJECTS = $(TEST_SOURCES:.c=.o) $(UNITY_SOURCES:.c=.o)
+
+# O objeto do Unity
+UNITY_OBJECT = $(UNITYDIR)/unity.o
+
+# O arquivo .c principal do runner de testes
+TEST_RUNNER_SRC = $(TESTDIR)/test_runner.c
+# O objeto principal do runner de testes
+TEST_RUNNER_OBJ = $(TEST_RUNNER_SRC:.c=.o)
+
+# Lista de todos os arquivos .c de casos de teste (que são #included pelo runner)
+TEST_CASE_SOURCES = $(filter-out $(TEST_RUNNER_SRC), $(wildcard $(TESTDIR)/*.c))
 
 # --- REGRAS DE COMPILAÇÃO ---
 
@@ -35,20 +40,22 @@ $(TARGET): $(OBJECTS)
 	$(CC) $(OBJECTS) -o $(TARGET)
 
 # Regra para compilar o executável de testes
-# CORREÇÃO: Usa a lista de objetos SEM o main.o para a linkagem
-$(TEST_TARGET): $(APP_OBJECTS_NO_MAIN) $(TEST_OBJECTS)
-	$(CC) $(APP_OBJECTS_NO_MAIN) $(TEST_OBJECTS) -o $(TEST_TARGET)
+# CORREÇÃO: Linka apenas os objetos da app, o runner principal e o unity.
+$(TEST_TARGET): $(APP_OBJECTS_NO_MAIN) $(TEST_RUNNER_OBJ) $(UNITY_OBJECT)
+	$(CC) $(APP_OBJECTS_NO_MAIN) $(TEST_RUNNER_OBJ) $(UNITY_OBJECT) -o $(TEST_TARGET)
 
 # Regra para compilar arquivos .c da aplicação em .o
 $(SRCDIR)/%.o: $(SRCDIR)/%.c $(wildcard $(INCDIR)/*.h)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-# Regra para compilar arquivos .c de teste em .o
-$(TESTDIR)/%.o: $(TESTDIR)/%.c $(wildcard $(INCDIR)/*.h)
-	$(CC) $(CFLAGS) -c $< -o $@
+# Regra para compilar o test_runner.c em .o
+# CORREÇÃO: Esta é a única regra que compila um .c de teste.
+# Ela depende dos arquivos de caso de teste (.c) que ela inclui.
+$(TEST_RUNNER_OBJ): $(TEST_RUNNER_SRC) $(TEST_CASE_SOURCES) $(wildcard $(INCDIR)/*.h)
+	$(CC) $(CFLAGS) -c $(TEST_RUNNER_SRC) -o $(TEST_RUNNER_OBJ)
 
 # Regra para compilar o unity.c em .o
-$(UNITYDIR)/%.o: $(UNITYDIR)/%.c
+$(UNITY_OBJECT): $(UNITYDIR)/unity.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 # --- REGRAS DE EXECUÇÃO E LIMPEZA ---

@@ -1,15 +1,5 @@
 #include "unity.h"
-#include "semantic.h" // Ficheiro com o código a ser testado
-
-// As funções setUp e tearDown são executadas antes e depois de cada teste.
-// Úteis para inicializar/limpar recursos.
-void setUp(void) {
-    // Pode deixar em branco se não precisar
-}
-
-void tearDown(void) {
-    // Pode deixar em branco se não precisar
-}
+#include "semantic.h" 
 
 void test_new_symbol_node(void) {
     SymbolNode * new = new_symbol_node("var", false, VAR, 100);
@@ -47,15 +37,4 @@ void test_pop_symbol_node(void) {
     TEST_ASSERT_EQUAL(stack, new);
     TEST_ASSERT_EQUAL(stack->next, NULL);
     TEST_ASSERT_EQUAL(ret, new2);
-}
-
-
-int main(void) {
-    UNITY_BEGIN(); // Inicia o Unity
-
-    RUN_TEST(test_new_symbol_node);
-    RUN_TEST(test_push_symbol_node);
-    RUN_TEST(test_pop_symbol_node);
-
-    return UNITY_END(); // Termina o Unity e retorna o resultado
 }
