@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Compilador TXT para ASM</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+  <div class="card">
+    <div class="header">
+      <div class="icon">⚡</div>
+      <h2>Compilador TXT → ASM</h2>
+      <p class="subtitle">Converta seus arquivos de texto em assembly</p>
+    </div>
+
+    <form id="compileForm">
+      <label for="txtfile">📁 Selecione o arquivo</label>
+      <div class="file-input-wrapper">
+        <input type="file" id="txtfile" accept=".txt" required>
+        <div class="file-info" id="fileInfo"></div>
+      </div>
+
+      <button type="submit">Compilar</button>
+    </form>
+
+    <div class="success-message" id="successMsg">
+      ✅ Arquivo compilado com sucesso!
+    </div>
+  </div>
+
+  <script>
+    const fileInput = document.getElementById('txtfile');
+    const fileInfo = document.getElementById('fileInfo');
+    const successMsg = document.getElementById('successMsg');
+
+    fileInput.addEventListener('change', function() {
+      if (this.files.length > 0) {
+        const file = this.files[0];
+        const sizeMB = (file.size / 1024 / 1024).toFixed(2);
+        fileInfo.textContent = `📄 ${file.name} (${sizeMB} MB)`;
+        fileInfo.classList.add('show');
+        successMsg.classList.remove('show');
+      }
+    });
+
+    document.getElementById('compileForm').addEventListener('submit', function(event) {
+      event.preventDefault();
+
+      if (!fileInput.files.length) return;
+
+      const file = fileInput.files[0];
+      const reader = new FileReader();
+
+      reader.onload = function(e) {
+        const content = e.target.result;
+        const base = file.name.replace(/\.txt$/i, '') || 'arquivo';
+        const asmName = base + '.asm';
+        gerarDownload(asmName, content);
+
+        successMsg.classList.add('show');
+        setTimeout(() => {
+          successMsg.classList.remove('show');
+        }, 3000);
+      };
+
+      reader.readAsText(file);
+    });
+
+    function gerarDownload(nome, texto) {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([texto], {
+        type: 'text/plain'
+      }));
+      a.download = nome;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    }
+  </script>
+</body>
+
+</html>
