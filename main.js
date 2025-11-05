@@ -2,6 +2,8 @@ const { app, BrowserWindow } = require('electron')
 const { spawn } = require('child_process')
 const net = require('net')
 
+const pythonCmd = process.platform === 'win32' ? 'python' : 'python3'
+
 let flaskProcess
 
 function waitForFlask(port, callback) {
@@ -28,8 +30,8 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
-  flaskProcess = spawn('python', ['main.py'], {
-    cwd: __dirname,
+  flaskProcess = spawn(pythonCmd, ['main.py'], {
+    cwd: process.resourcesPath,  
     stdio: 'inherit'
   })
 
