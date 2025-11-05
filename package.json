@@ -1,0 +1,24 @@
+{
+  "name": "frank",
+  "version": "1.0.0",
+  "main": "main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "electron ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RafaMazoliniF/Frank.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/RafaMazoliniF/Frank/issues"
+  },
+  "homepage": "https://github.com/RafaMazoliniF/Frank#readme",
+  "description": "",
+  "devDependencies": {
+    "electron": "^39.1.0"
+  }
+}
