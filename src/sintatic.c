@@ -1,4 +1,5 @@
 #include "sintatic.h"
+#include "semantic.h"
 
 void print_error(const char *expected, const char *context) {
     fprintf(stderr, "\n=== ERRO SINTÁTICO ===\n");
@@ -159,11 +160,10 @@ void handle_procedure_declaration() {
         print_error("'procedimento'", "declaração de procedimento");
     }
 
-    if (current_token.symbol == SIDENTIFICADOR) {
-    
+    if (current_token.symbol == SIDENTIFICADOR && can_declare_subroutine(current_token.lexem)) {
         get_next_token();
     } else {
-        print_error("identificador", "após 'procedimento'");
+        print_error("identificador válido", "após 'procedimento'");
     }
 
     if (current_token.symbol == SPONTO_VIRGULA) {
@@ -186,11 +186,10 @@ void handle_function_declaration() {
         print_error("'funcao'", "declaração de função");
     }
 
-    if (current_token.symbol == SIDENTIFICADOR) {
-    
+    if (current_token.symbol == SIDENTIFICADOR && can_declare_subroutine(current_token.lexem)) {
         get_next_token();
     } else {
-        print_error("identificador", "após 'funcao'");
+        print_error("identificador válido", "após 'funcao'");
     }
 
     if (current_token.symbol == SDOISPONTOS) {
@@ -295,6 +294,19 @@ void handle_procedure_call() {
     if (current_token.symbol != SIDENTIFICADOR) {
         print_error("identificador", "chamada de procedimento");
     }
+
+    // ------------------ Semantic -----------------
+    // Verify if procedure exists
+    SymbolNode * node = get_symbol_from_lexem(current_token.lexem);
+    if (node == NULL) {
+        print_error("identificador existente", "chamada de procedimento");
+    }
+
+    else if (node->type != VOID) {
+        print_error("procedimento", "chamada de procedimento");
+    }
+    // --------------------------------------------
+
     get_next_token();
 }
 
@@ -352,6 +364,20 @@ void handle_read_command() {
     if (current_token.symbol != SIDENTIFICADOR) {
         print_error("identificador", "dentro de 'leia(...)'");
     }
+
+    // ---------------Semantic----------------
+    // verify if identifier exists
+    SymbolNode * symbol_node = get_symbol_from_lexem(current_token.lexem);
+    if (symbol_node == NULL) {
+        print_error("", "identificador nao existe");
+    } 
+    
+    // and if variable is a INT
+    else if (symbol_node->type != INT) {
+        print_error("inteiro", "escreva");
+    }
+    // --------------------------------------
+
     get_next_token();
     
     if (current_token.symbol != SFECHA_PARENTESES) {
@@ -375,6 +401,20 @@ void handle_write_command() {
     if (current_token.symbol != SIDENTIFICADOR) {
         print_error("identificador", "dentro de 'escreva(...)'");
     }
+
+    // ---------------Semantic----------------
+    // verify if identifier exists
+    SymbolNode * symbol_node = get_symbol_from_lexem(current_token.lexem);
+    if (symbol_node == NULL) {
+        print_error("", "identificador nao existe");
+    } 
+    
+    // and if variable is a INT
+    else if (symbol_node->type != INT) {
+        print_error("inteiro", "escreva");
+    }
+    // --------------------------------------
+    
     get_next_token();
     
     if (current_token.symbol != SFECHA_PARENTESES) {
@@ -429,7 +469,7 @@ void handle_term() {
 //              (<expressão>) | verdadeiro | falso |
 //              nao <fator>)
 void handle_factor() {
-    if (current_token.symbol == SIDENTIFICADOR || 
+    if ((current_token.symbol == SIDENTIFICADOR) || 
         current_token.symbol == SNUMERO || 
         current_token.symbol == SVERDADEIRO ||
         current_token.symbol == SFALSO

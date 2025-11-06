@@ -6,10 +6,9 @@
 #include "includes.h"
 
 typedef enum {
-    VAR,
-    SUBROUTINE,
-    INT,
-    BOOL
+    VOID, // Only procedures are void
+    INT, // variables or function return
+    BOOL // variables or function return
 } Type;
 
 typedef struct SymbolNode {
@@ -20,12 +19,17 @@ typedef struct SymbolNode {
     struct SymbolNode * next;
 } SymbolNode;
 
-SymbolNode * new_symbol_node(char * lexem, bool scope, Type type, unsigned int mem);
-void push_symbol_node(SymbolNode * node, SymbolNode ** table);
-SymbolNode * pop_symbol_node(SymbolNode ** table);
+extern SymbolNode * table;
 
-bool can_declare_variable(char * lexem, SymbolNode ** symbol_table);
-bool can_declare_subroutine(char * lexem, SymbolNode ** symbol_table);
+void init_table();
+
+SymbolNode * new_symbol_node(char * lexem, bool scope, Type type, unsigned int mem);
+void push_symbol_node(SymbolNode * node);
+SymbolNode * pop_symbol_node();
+
+bool can_declare_variable(char * lexem);
+bool can_declare_subroutine(char * lexem);
 bool are_symbols_compatible(SymbolNode * a, SymbolNode * b);
+SymbolNode * get_symbol_from_lexem(char * lexem);
 
 #endif

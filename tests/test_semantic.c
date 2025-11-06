@@ -3,7 +3,7 @@
 #include <stdbool.h>
 
 void test_can_declare_variable() {
-    SymbolNode * table = NULL;
+    init_table();
 
     SymbolNode * var1 = new_symbol_node("var1", false, INT, 0);
     SymbolNode * func1 = new_symbol_node("func1", true, INT, 1);
@@ -12,24 +12,24 @@ void test_can_declare_variable() {
     SymbolNode * func2 = new_symbol_node("func2", true, INT, 5);
     SymbolNode * var4 = new_symbol_node("var4", false, BOOL, 6);
 
-    push_symbol_node(var1, &table);
-    push_symbol_node(func1, &table);
-    push_symbol_node(var2, &table);
-    push_symbol_node(var3, &table);
-    push_symbol_node(func2, &table);
-    push_symbol_node(var4, &table);
+    push_symbol_node(var1);
+    push_symbol_node(func1);
+    push_symbol_node(var2);
+    push_symbol_node(var3);
+    push_symbol_node(func2);
+    push_symbol_node(var4);
     
 
-    TEST_ASSERT_TRUE(can_declare_variable("var5", &table));
-    TEST_ASSERT_TRUE(can_declare_variable("var3", &table));
-    TEST_ASSERT_TRUE(can_declare_variable("var2", &table));
-    TEST_ASSERT_FALSE(can_declare_variable("func2", &table));
-    TEST_ASSERT_TRUE(can_declare_variable("func1", &table));
-    TEST_ASSERT_FALSE(can_declare_variable("var4", &table));
+    TEST_ASSERT_TRUE(can_declare_variable("var5"));
+    TEST_ASSERT_TRUE(can_declare_variable("var3"));
+    TEST_ASSERT_TRUE(can_declare_variable("var2"));
+    TEST_ASSERT_FALSE(can_declare_variable("func2"));
+    TEST_ASSERT_TRUE(can_declare_variable("func1"));
+    TEST_ASSERT_FALSE(can_declare_variable("var4"));
 }
 
 void test_can_declare_subroutine() {
-    SymbolNode * table = NULL;
+    init_table();
 
     SymbolNode * var1 = new_symbol_node("var1", false, INT, 0);
     SymbolNode * func1 = new_symbol_node("func1", true, INT, 1);
@@ -38,21 +38,21 @@ void test_can_declare_subroutine() {
     SymbolNode * func2 = new_symbol_node("func2", true, INT, 5);
     SymbolNode * var4 = new_symbol_node("var4", false, BOOL, 6);
 
-    push_symbol_node(var1, &table);
-    push_symbol_node(func1, &table);
-    push_symbol_node(var2, &table);
-    push_symbol_node(var3, &table);
-    push_symbol_node(func2, &table);
-    push_symbol_node(var4, &table);
+    push_symbol_node(var1);
+    push_symbol_node(func1);
+    push_symbol_node(var2);
+    push_symbol_node(var3);
+    push_symbol_node(func2);
+    push_symbol_node(var4);
     
 
-    TEST_ASSERT_TRUE(can_declare_subroutine("var5", &table));
-    TEST_ASSERT_FALSE(can_declare_subroutine("var3", &table));
-    TEST_ASSERT_FALSE(can_declare_subroutine("var2", &table));
-    TEST_ASSERT_FALSE(can_declare_subroutine("func2", &table));
-    TEST_ASSERT_FALSE(can_declare_subroutine("func1", &table));
-    TEST_ASSERT_FALSE(can_declare_subroutine("var4", &table));
-    TEST_ASSERT_TRUE(can_declare_subroutine("func10", &table));
+    TEST_ASSERT_TRUE(can_declare_subroutine("var5"));
+    TEST_ASSERT_FALSE(can_declare_subroutine("var3"));
+    TEST_ASSERT_FALSE(can_declare_subroutine("var2"));
+    TEST_ASSERT_FALSE(can_declare_subroutine("func2"));
+    TEST_ASSERT_FALSE(can_declare_subroutine("func1"));
+    TEST_ASSERT_FALSE(can_declare_subroutine("var4"));
+    TEST_ASSERT_TRUE(can_declare_subroutine("func10"));
 }
 
 void test_are_symbols_compatible() {
