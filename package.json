@@ -4,22 +4,21 @@
   "description": "Frankompiler",
   "author": "Frank",
   "main": "main.js",
-
   "scripts": {
     "start": "electron .",
     "build": "electron-builder"
   },
-
   "devDependencies": {
-    "electron": "^30.0.0",
+    "electron": "^39.1.1",
     "electron-builder": "^26.0.12"
   },
-
   "build": {
     "appId": "com.vinicius.frankapp",
     "productName": "Frank App",
     "linux": {
-      "target": ["AppImage"],
+      "target": [
+        "AppImage"
+      ],
       "category": "Utility"
     },
     "directories": {
