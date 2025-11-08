@@ -1,5 +1,8 @@
 #include "sintatic.h"
+#include "lexical.h"
 #include "semantic.h"
+#include <stdbool.h>
+#include <stdio.h>
 
 void print_error(const char *expected, const char *context) {
     fprintf(stderr, "\n=== ERRO SINTÁTICO ===\n");
@@ -14,6 +17,8 @@ void print_error(const char *expected, const char *context) {
     }
     
     fprintf(stderr, "=====================\n\n");
+
+    fflush(stderr);
     exit(EXIT_FAILURE);
 }
 
@@ -31,6 +36,9 @@ void handle_program() {
         get_next_token();
 
         if (current_token.symbol == SIDENTIFICADOR) {
+
+            insert_node_table(current_token.lexem, true, PROGRAM_NAME, 1);
+
             get_next_token();
 
             if (current_token.symbol == SPONTO_VIRGULA) {
@@ -40,7 +48,11 @@ void handle_program() {
 
                 if (current_token.symbol == SPONTO) {
                     get_next_token();
-                    return;
+                    
+                    if (current_token.lexem != NULL) {
+                        print_error("EOF", "após fim de programa");
+                    }
+
                 } else {
                     print_error("'.'", "após bloco do programa");
                 }
@@ -93,12 +105,17 @@ void handle_variable_declaration_section(){
 
 // <declaração de variáveis>::= <identificador> {, <identificador>} : <tipo>
 void handle_variables() {
-    if (current_token.symbol != SIDENTIFICADOR) {
+    if (current_token.symbol != SIDENTIFICADOR || !can_declare_variable(current_token.lexem)) {
         print_error("identificador", "declaração de variáveis");
     }
 
     while (current_token.symbol == SIDENTIFICADOR) {
-    
+        if (!can_declare_variable(current_token.lexem)) {
+            print_error("identificador ja existe", "semantic: declaração de variáveis");
+        }
+
+        insert_node_table(current_token.lexem, false, VAR, -1);
+
         get_next_token();
 
         if (current_token.symbol == SVIRGULA) {
@@ -123,7 +140,12 @@ void handle_variables() {
 // <tipo> ::= (inteiro | booleano)
 void handle_type() {
     if (current_token.symbol == SINTEIRO || current_token.symbol == SBOOLEANO) {
-    
+        if (current_token.symbol == SINTEIRO) {
+            insert_type(INT);
+        } else if (current_token.symbol == SBOOLEANO) {
+            insert_type(BOOL);
+        }
+
         get_next_token();
     } else {
         print_error("'inteiro' ou 'booleano'", "tipo de variável");
@@ -216,7 +238,6 @@ void handle_function_declaration() {
 //               fim
 void handle_commands() {
     if (current_token.symbol == SINICIO) {
-    
         get_next_token();
     } else {
         print_error("'inicio'", "bloco de comandos");
@@ -268,7 +289,8 @@ void handle_command() {
         case SINICIO: 
             handle_commands();
             break;
-
+        case SFIM:
+            break;
         default:
             print_error("identificador, 'se', 'enquanto', 'leia', 'escreva' ou 'inicio'", "comando");
     }
@@ -276,17 +298,43 @@ void handle_command() {
 
 // <atribuição_chprocedimento>::= (<comando atribuicao>| <chamada de procedimento>)
 void handle_assignment_chprocedure() {
-    if (current_token.symbol != SIDENTIFICADOR) {
+    if (current_token.symbol == SIDENTIFICADOR) {
+        SymbolNode * node = get_symbol_from_lexem(current_token.lexem);
+
+        if (node == NULL) {
+            print_error("identificador não existe", "atribuição ou chamada de procedimento");
+        }
+
+        // If identifier is a procedure
+        if (node->type == VOID) {
+            handle_procedure_call();
+            get_next_token();
+        } else {
+            handle_assignment_command();
+            get_next_token();
+        }
+    } 
+    
+    else {
         print_error("identificador", "atribuição ou chamada de procedimento");
     }
-    
-    get_next_token();
-    
-    if (current_token.symbol == SATRIBUICAO) {
-        get_next_token();
-        handle_expression();
+}
+
+//<comando atribuicao>::= <identificador> := <expressão>
+void handle_assignment_command() {
+    if (current_token.symbol != SIDENTIFICADOR) {
+        print_error("identificador", "comando de atribuição");
     }
-    // Se não for atribuição, é uma chamada de procedimento (já consumimos o identificador)
+
+    get_next_token();
+
+    if (current_token.symbol != SATRIBUICAO) {
+        print_error("atribuidor", "comando de atribuição");
+    }
+
+    get_next_token();
+
+    handle_expression();
 }
 
 // <chamada de procedimento>::= <identificador>
@@ -373,8 +421,8 @@ void handle_read_command() {
     } 
     
     // and if variable is a INT
-    else if (symbol_node->type != INT) {
-        print_error("inteiro", "escreva");
+    else if (symbol_node->type != INT && symbol_node->scope == true) {
+        print_error("var inteiro", "escreva");
     }
     // --------------------------------------
 
@@ -410,8 +458,8 @@ void handle_write_command() {
     } 
     
     // and if variable is a INT
-    else if (symbol_node->type != INT) {
-        print_error("inteiro", "escreva");
+    else if (symbol_node->type != INT && symbol_node->scope == true) {
+        print_error("var inteiro", "escreva");
     }
     // --------------------------------------
     
@@ -469,31 +517,54 @@ void handle_term() {
 //              (<expressão>) | verdadeiro | falso |
 //              nao <fator>)
 void handle_factor() {
-    if ((current_token.symbol == SIDENTIFICADOR) || 
-        current_token.symbol == SNUMERO || 
-        current_token.symbol == SVERDADEIRO ||
-        current_token.symbol == SFALSO
-    ) {
-        get_next_token();
-        return;
-    }
 
-    if (current_token.symbol == SNAO) {
-        get_next_token();
-        handle_factor();
-        return;  
-    } 
+    switch (current_token.symbol) {
+        case SIDENTIFICADOR:
+            {SymbolNode * node = get_symbol_from_lexem(current_token.lexem);
 
-    if (current_token.symbol == SABRE_PARENTESES) {
-        get_next_token();
-        handle_expression();
-        
-        if (current_token.symbol != SFECHA_PARENTESES) {
-            print_error("')'", "fechamento de expressão entre parênteses");
-        }
-        get_next_token();
-        return;
+            if (node != NULL) {
+                switch (node->type) {
+                    case INT_VAR:
+                    case BOOL_VAR:
+                        handle_variable();
+                        break;
+                    case INT_FUNC:
+                    case BOOL_FUNC:
+                        handle_function_call();
+                        break;
+                    default:
+                        print_error("tipo válido", "fator");
+                }
+            }}
+
+            break;
+        case SNUMERO:
+        case SVERDADEIRO:
+        case SFALSO:
+            get_next_token();
+            break;
+        case SNAO:
+            get_next_token();
+            handle_factor();
+            break;
+        case SABRE_PARENTESES:
+            get_next_token();
+            handle_expression();
+
+            if (current_token.symbol != SFECHA_PARENTESES) {
+                print_error("')'", "fechamento de expressão entre parênteses");
+            }
+
+            get_next_token();
+            break;
+        default:
+            print_error("identificador, número, 'verdadeiro', 'falso', 'nao' ou '('", "fator em expressão");
     }
-    
-    print_error("identificador, número, 'verdadeiro', 'falso', 'nao' ou '('", "fator em expressão");
+}
+
+// <variável> ::= <identificador>
+void handle_variable() {
+    if (current_token.symbol != SIDENTIFICADOR) {
+        print_error("identificador", "variável");
+    }
 }

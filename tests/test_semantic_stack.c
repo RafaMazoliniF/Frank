@@ -2,7 +2,7 @@
 #include "semantic.h" 
 
 void test_new_symbol_node(void) {
-    SymbolNode * new = new_symbol_node("var", false, VAR, 100);
+    SymbolNode * new = new_symbol_node("var", false, INT_VAR, 100);
     TEST_ASSERT_EQUAL_STRING(new->lexem, "var");
     TEST_ASSERT_EQUAL(new->scope, false);
     TEST_ASSERT_EQUAL_INT(new->type, 0);
@@ -12,13 +12,13 @@ void test_new_symbol_node(void) {
 
 void test_push_symbol_node(void) {
     init_table();
-    SymbolNode * new = new_symbol_node("var", false, VAR, 100);
+    SymbolNode * new = new_symbol_node("var", false, INT_VAR, 100);
     push_symbol_node(new);
 
     TEST_ASSERT_EQUAL(table, new);
     TEST_ASSERT_EQUAL(table->next, NULL);
 
-    SymbolNode * new2 = new_symbol_node("var", true, VAR, 2);
+    SymbolNode * new2 = new_symbol_node("var", true, INT_VAR, 2);
     push_symbol_node(new2);
 
     TEST_ASSERT_EQUAL(table, new2);
@@ -27,8 +27,8 @@ void test_push_symbol_node(void) {
 
 void test_pop_symbol_node(void) {
     init_table();
-    SymbolNode * new = new_symbol_node("var", false, VAR, 100);
-    SymbolNode * new2 = new_symbol_node("var", true, VAR, 2);
+    SymbolNode * new = new_symbol_node("var", false, INT_VAR, 100);
+    SymbolNode * new2 = new_symbol_node("var", true, INT_VAR, 2);
     push_symbol_node(new);
     push_symbol_node(new2);
 

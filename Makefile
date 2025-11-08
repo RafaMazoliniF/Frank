@@ -62,7 +62,7 @@ $(UNITY_OBJECT): $(UNITYDIR)/unity.c
 
 # Compila e executa os testes
 test: $(TEST_TARGET)
-	./$(TEST_TARGET) 
+	./$(TEST_TARGET)
 
 # Limpar arquivos compilados
 clean:

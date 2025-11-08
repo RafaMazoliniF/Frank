@@ -29,6 +29,11 @@ void push_symbol_node(SymbolNode * node) {
     table = node;
 }
 
+void insert_node_table(char * lexem, bool scope, Type type, unsigned int mem) {
+    SymbolNode * node = new_symbol_node(lexem, scope, type, mem);
+    push_symbol_node(node);
+}
+
 // Pop a new symbol to the table, removing the top node
 // receives the pointer to the top of the stack
 // returns the node popped
@@ -46,7 +51,7 @@ bool can_declare_variable(char * lexem) {
     SymbolNode * current = table;
     bool exited_scope = false;
 
-    while (current->next != NULL && !exited_scope) {
+    while (current != NULL && !exited_scope) {
         if (strcmp(current->lexem, lexem) == 0) {
             return false;
         }
@@ -64,7 +69,7 @@ bool can_declare_variable(char * lexem) {
 bool can_declare_subroutine(char * lexem) {
     SymbolNode * current = table;
 
-    while (current->next != NULL) {
+    while (current != NULL) {
         if (strcmp(current->lexem, lexem) == 0){
             return false;
         }
@@ -85,12 +90,22 @@ bool are_symbols_compatible(SymbolNode * a, SymbolNode * b) {
 }
 
 SymbolNode * get_symbol_from_lexem(char * lexem) {
-    for (SymbolNode * current = table; current->next != NULL; current = current->next) {
+    for (SymbolNode * current = table; current != NULL; current = current->next) {
         if (strcmp(current->lexem, lexem) == 0) {
             return current;
         }
     }
 
     return NULL;
+}
+
+void insert_type(Type type) {
+    for (SymbolNode * current = table; current->type == VAR || current->type == FUNC; current = current->next) {
+        current->type = type;
+
+        if (current->next == NULL) {
+            break;
+        }
+    }
 }
 

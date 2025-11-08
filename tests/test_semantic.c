@@ -5,12 +5,12 @@
 void test_can_declare_variable() {
     init_table();
 
-    SymbolNode * var1 = new_symbol_node("var1", false, INT, 0);
-    SymbolNode * func1 = new_symbol_node("func1", true, INT, 1);
-    SymbolNode * var2 = new_symbol_node("var2", false, INT, 2);
-    SymbolNode * var3 = new_symbol_node("var3", false, BOOL, 3);
-    SymbolNode * func2 = new_symbol_node("func2", true, INT, 5);
-    SymbolNode * var4 = new_symbol_node("var4", false, BOOL, 6);
+    SymbolNode * var1 = new_symbol_node("var1", false, INT_VAR, 0);
+    SymbolNode * func1 = new_symbol_node("func1", true, INT_VAR, 1);
+    SymbolNode * var2 = new_symbol_node("var2", false, INT_VAR, 2);
+    SymbolNode * var3 = new_symbol_node("var3", false, BOOL_VAR, 3);
+    SymbolNode * func2 = new_symbol_node("func2", true, INT_VAR, 5);
+    SymbolNode * var4 = new_symbol_node("var4", false, BOOL_VAR, 6);
 
     push_symbol_node(var1);
     push_symbol_node(func1);
@@ -31,12 +31,12 @@ void test_can_declare_variable() {
 void test_can_declare_subroutine() {
     init_table();
 
-    SymbolNode * var1 = new_symbol_node("var1", false, INT, 0);
-    SymbolNode * func1 = new_symbol_node("func1", true, INT, 1);
-    SymbolNode * var2 = new_symbol_node("var2", false, INT, 2);
-    SymbolNode * var3 = new_symbol_node("var3", false, BOOL, 3);
-    SymbolNode * func2 = new_symbol_node("func2", true, INT, 5);
-    SymbolNode * var4 = new_symbol_node("var4", false, BOOL, 6);
+    SymbolNode * var1 = new_symbol_node("var1", false, INT_VAR, 0);
+    SymbolNode * func1 = new_symbol_node("func1", true, INT_VAR, 1);
+    SymbolNode * var2 = new_symbol_node("var2", false, INT_VAR, 2);
+    SymbolNode * var3 = new_symbol_node("var3", false, BOOL_VAR, 3);
+    SymbolNode * func2 = new_symbol_node("func2", true, INT_VAR, 5);
+    SymbolNode * var4 = new_symbol_node("var4", false, BOOL_VAR, 6);
 
     push_symbol_node(var1);
     push_symbol_node(func1);
@@ -56,10 +56,10 @@ void test_can_declare_subroutine() {
 }
 
 void test_are_symbols_compatible() {
-    SymbolNode * var1 = new_symbol_node("var1", false, INT, 1);
-    SymbolNode * var2 = new_symbol_node("var2", false, BOOL, 2);
-    SymbolNode * func1 = new_symbol_node("func1", true, INT, 3);
-    SymbolNode * func2 = new_symbol_node("func2", true, BOOL, 4);
+    SymbolNode * var1 = new_symbol_node("var1", false, INT_VAR, 1);
+    SymbolNode * var2 = new_symbol_node("var2", false, BOOL_VAR, 2);
+    SymbolNode * func1 = new_symbol_node("func1", true, INT_VAR, 3);
+    SymbolNode * func2 = new_symbol_node("func2", true, BOOL_VAR, 4);
 
     TEST_ASSERT_FALSE(are_symbols_compatible(var1, var2));
     TEST_ASSERT_TRUE(are_symbols_compatible(var1, func1));

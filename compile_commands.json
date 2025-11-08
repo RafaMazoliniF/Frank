@@ -9,40 +9,6 @@
       "-Iunity",
       "-c",
       "-o",
-      "src/lexical.o",
-      "src/lexical.c"
-    ],
-    "directory": "/home/rfernandes/Documents/Frank",
-    "file": "/home/rfernandes/Documents/Frank/src/lexical.c",
-    "output": "/home/rfernandes/Documents/Frank/src/lexical.o"
-  },
-  {
-    "arguments": [
-      "/usr/bin/gcc",
-      "-Wall",
-      "-Wextra",
-      "-std=c99",
-      "-Iinclude",
-      "-Iunity",
-      "-c",
-      "-o",
-      "src/semantic.o",
-      "src/semantic.c"
-    ],
-    "directory": "/home/rfernandes/Documents/Frank",
-    "file": "/home/rfernandes/Documents/Frank/src/semantic.c",
-    "output": "/home/rfernandes/Documents/Frank/src/semantic.o"
-  },
-  {
-    "arguments": [
-      "/usr/bin/gcc",
-      "-Wall",
-      "-Wextra",
-      "-std=c99",
-      "-Iinclude",
-      "-Iunity",
-      "-c",
-      "-o",
       "src/sintatic.o",
       "src/sintatic.c"
     ],
