@@ -2,6 +2,7 @@
 
 FILE *file = NULL;
 Token current_token = {0};
+int current_line = 1;
 
 void getFile(char *filename) {
     file = fopen(filename, "r");  
@@ -99,6 +100,9 @@ int get_symbol(char * word){
  */
 char get_next_char() {
     int c = fgetc(file);
+    if (c == '\n') {
+        current_line++;
+    }
     if (c == EOF) return '\0'; 
     return (char)c;
 }
@@ -217,7 +221,7 @@ void get_next_token() {
 
     if (word == NULL) {
         token.lexem = NULL;
-        token.symbol = -1;
+        token.symbol = ENDFILE;
         current_token = token;
         return;
     }
@@ -226,6 +230,7 @@ void get_next_token() {
         free(word);
         handle_comment();
         get_next_token(); 
+        return;
     }
 
     token.lexem = word;

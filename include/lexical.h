@@ -44,7 +44,8 @@ typedef enum {
     SDIV,               // div
     SE,                 // e
     SOU,                // ou
-    SNAO                // nao
+    SNAO,                // nao
+    ENDFILE
 } Simbolo;
 
 typedef struct Token {
@@ -63,5 +64,6 @@ int get_symbol(char * word);
 void get_next_token();
 
 extern Token current_token;
+extern int current_line;
 
 #endif

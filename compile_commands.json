@@ -7,6 +7,43 @@
       "-std=c99",
       "-Iinclude",
       "-Iunity",
+      "-g",
+      "-c",
+      "-o",
+      "src/lexical.o",
+      "src/lexical.c"
+    ],
+    "directory": "/home/rfernandes/Documents/Frank",
+    "file": "/home/rfernandes/Documents/Frank/src/lexical.c",
+    "output": "/home/rfernandes/Documents/Frank/src/lexical.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-Wall",
+      "-Wextra",
+      "-std=c99",
+      "-Iinclude",
+      "-Iunity",
+      "-g",
+      "-c",
+      "-o",
+      "src/semantic.o",
+      "src/semantic.c"
+    ],
+    "directory": "/home/rfernandes/Documents/Frank",
+    "file": "/home/rfernandes/Documents/Frank/src/semantic.c",
+    "output": "/home/rfernandes/Documents/Frank/src/semantic.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-Wall",
+      "-Wextra",
+      "-std=c99",
+      "-Iinclude",
+      "-Iunity",
+      "-g",
       "-c",
       "-o",
       "src/sintatic.o",
@@ -24,6 +61,7 @@
       "-std=c99",
       "-Iinclude",
       "-Iunity",
+      "-g",
       "-c",
       "-o",
       "tests/test_runner.o",
@@ -32,5 +70,23 @@
     "directory": "/home/rfernandes/Documents/Frank",
     "file": "/home/rfernandes/Documents/Frank/tests/test_runner.c",
     "output": "/home/rfernandes/Documents/Frank/tests/test_runner.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-Wall",
+      "-Wextra",
+      "-std=c99",
+      "-Iinclude",
+      "-Iunity",
+      "-g",
+      "-c",
+      "-o",
+      "unity/unity.o",
+      "unity/unity.c"
+    ],
+    "directory": "/home/rfernandes/Documents/Frank",
+    "file": "/home/rfernandes/Documents/Frank/unity/unity.c",
+    "output": "/home/rfernandes/Documents/Frank/unity/unity.o"
   }
 ]

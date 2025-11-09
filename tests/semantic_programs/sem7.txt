@@ -1,0 +1,29 @@
+programa test1;
+
+var a,b,c: inteiro;
+
+procedimento analisa2;
+inicio
+  leia(a);
+  b:= a*a+(c div b) 
+fim;
+
+funcao func1: inteiro;
+var a: booleano;
+    b: inteiro;
+inicio
+    se (b > 1) ou a
+    entao
+    inicio
+        func1 := (b + 1) * 2 
+    fim;
+fim;
+
+inicio
+    analisa2;
+    se b > (c+ a*a)
+    entao escreva(b)
+    senao escreva(c);
+    b := func1;
+fim.
+{fim}   

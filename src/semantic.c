@@ -109,3 +109,9 @@ void insert_type(Type type) {
     }
 }
 
+void pop_scope() {
+    while (table->scope != true && table != NULL) {
+        pop_symbol_node();
+    }
+}
+

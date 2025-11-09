@@ -1,0 +1,9 @@
+{Teste 6 - DEVE FALHAR (tipos incompativeis)}
+programa test1;
+
+var a,b,c: inteiro;
+    x, y, z: booleano;
+
+inicio
+    a := x < y;
+fim. 
