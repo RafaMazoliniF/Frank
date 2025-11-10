@@ -4,67 +4,64 @@
 
 #define MAX 100
 
-char stack[MAX];
-int top = -1;
+/* PILHA 1 - operadores */
+char stack1[MAX];
+int top1 = -1;
 
 void push(char c) {
-    stack[++top] = c;
+    stack1[++top1] = c;
 }
 
 char pop() {
-    return stack[top--];
+    return stack1[top1--];
 }
 
-char see_stack() {
-    return stack[top];
+char peek() {
+    return stack1[top1];
 }
 
-int end_stack() {
-    return top == -1;
+int empty() {
+    return top1 == -1;
 }
 
 int compare_operands(char c) {
-    if (c == '*' || c == '/')
+    if (c == '*' || c == '/') 
         return 2;
-
-    if (c == '+' || c == '-')
+    if (c == '+' || c == '-') 
         return 1;
 
     return 0;
 }
 
-/*INSTRUÇÕES*/
 int M[1000];
 int s = -1;
 
 void LDC(int k) {
-    s = s + 1;
-    M[s] = k;
+    M[++s] = k;
 }
 
 void LDV(int n) {
-    s = s + 1;
-    M[s] = M[n];
+    M[++s] = M[n];
 }
 
 void ADD() {
     M[s-1] = M[s-1] + M[s];
-    s = s - 1;
+    s--;
 }
 
 void SUB() {
     M[s-1] = M[s-1] - M[s];
-    s = s - 1;
+    s--;
 }
 
 void MULT() {
     M[s-1] = M[s-1] * M[s];
-    s = s - 1;
+    s--;
 }
 
 void DIVI() {
     M[s-1] = M[s-1] / M[s];
-    s = s - 1; 
+    s--;
 }
 
 void AND() {
@@ -73,7 +70,7 @@ void AND() {
     } else {
         M[s-1] = 0;
     }
-    s = s - 1;
+    s--;
 }
 
 void OR() {
@@ -82,7 +79,7 @@ void OR() {
     } else {
         M[s-1] = 0;
     }
-    s = s - 1;
+    s--;
 }
 
 void NEG() {
@@ -95,8 +92,7 @@ void CME() {
     } else {
         M[s-1] = 0;
     }
-
-    s = s - 1;
+    s--;
 }
 
 void CMA() {
@@ -105,8 +101,7 @@ void CMA() {
     } else {
         M[s-1] = 0;
     }
-
-    s = s - 1;
+    s--;
 }
 
 void CEQ() {
@@ -115,8 +110,7 @@ void CEQ() {
     } else {
         M[s-1] = 0;
     }
-
-    s = s - 1;
+    s--;
 }
 
 void CDIF() {
@@ -125,8 +119,7 @@ void CDIF() {
     } else {
         M[s-1] = 0;
     }
-
-    s = s - 1;
+    s--;
 }
 
 void CMEQ() {
@@ -135,8 +128,7 @@ void CMEQ() {
     } else {
         M[s-1] = 0;
     }
-
-    s = s - 1;
+    s--;
 }
 
 void CMAQ() {
@@ -145,13 +137,26 @@ void CMAQ() {
     } else {
         M[s-1] = 0;
     }
+    s--;
+}
 
-    s = s - 1;
+void show_stack(){
+    if (s == -1) {
+        printf("(vazia)\n");
+        return;
+    }
+
+    for (int i = s; i >= 0; i--) {
+        if (i == s)
+            printf("| %d |  <-- topo\n", M[i]);
+        else
+            printf("| %d |\n", M[i]);
+    }
 }
 
 int main() {
+    char string[] = "(2 + 1) * 4";
     char output[MAX];
-    char string[] = "2 + 4 * 3";
     int j = 0;
 
     for (int i = 0; string[i] != '\0'; i++) {
@@ -159,64 +164,74 @@ int main() {
 
         if (c == ' ')
             continue;
-        
-        /*vê se é variavel -> vai direto pro output*/
-        if (isalnum(c)) {
+
+        /*se for digito, vai direto pro output*/
+        if (isdigit(c)) {
             output[j++] = c;
         }
 
-        /*vê se é ( -> vai pra pilha*/
+        /*se for digito, vai direto pro output*/
         else if (c == '(') {
             push(c);
         }
 
-        /*vê se é ) -> desempilha até ( e desempilha (*/
+        /*se for fecha_parenteses, desempilha até abre_parenteses*/
         else if (c == ')') {
-            while (!end_stack() && see_stack() != '(') {
+            while (!empty() && peek() != '(')
                 output[j++] = pop();
-            }
-            pop(); 
+            pop();
         }
 
-        /*vê se é operando e se for compara se tem um operando maior no topo da pilha*/
-        else {
-            while (!end_stack() && compare_operands(see_stack()) >= compare_operands(c)) 
-            {
+        /*se for operando, vê se tem outro operando mais forte na pilha*/
+        else { 
+            while (!empty() && compare_operands(peek()) >= compare_operands(c))
                 output[j++] = pop();
-            }
             push(c);
         }
     }
 
-    /*desempilha tudo no fim*/
-    while (!end_stack()) {
+    while (!empty())
         output[j++] = pop();
-    }
 
     output[j] = '\0';
 
-    printf("POSFIXA = %s\n", output);
-
-    /*=============================================*/
-    j = 0;
+    printf("POSFIXA = %s\n\n", output);
 
     for (int i = 0; output[i] != '\0'; i++) {
         char c = output[i];
-
-        if (isalnum(c)) {
-            //immutable[j++] = c;
-            printf("LDC %c\n", c);
+        //printf("%c", c);
+        if (isdigit(c)) {
+            c = c - '0';
+            printf("LDC %d\n", c);
+            LDC(c);
         }
 
-        else if(c == '+')
+        else if (isalpha(c)) {
+            printf("LDV %c\n", c);
+            LDV(c);
+        }
+
+        else if (c == '+') {
             printf("ADD\n");
-        else if(c == '-')
+            ADD();
+        }
+
+        else if (c == '-') {
             printf("SUB\n");
-        else if(c == '*')
+            SUB();
+        }
+
+        else if (c == '*') {
             printf("MULT\n");
-        else if(c == '/')
+            MULT();
+        }
+
+        else if (c == '/') {
             printf("DIVI\n");
+            DIVI();
+        }
     }
 
+    printf("RESULTADO = %d", M[s]);
     return 0;
 }
