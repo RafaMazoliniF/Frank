@@ -11,11 +11,12 @@ void init_table() {
 }
 
 // Creates a new symbol of symbol table
-SymbolNode * new_symbol_node(char * lexem, bool scope, Type type, unsigned int mem) {
+SymbolNode * new_symbol_node(char * lexem, bool scope, DataType data_type, StructureType structure_type, unsigned int mem) {
     SymbolNode * node = (SymbolNode*)malloc(sizeof(SymbolNode));
     node->lexem = lexem;
     node->scope = scope;
-    node->type = type;
+    node->data_type = data_type;
+    node->structure_type = structure_type;
     node->mem = mem;
     node->next = NULL;
 
@@ -29,8 +30,8 @@ void push_symbol_node(SymbolNode * node) {
     table = node;
 }
 
-void insert_node_table(char * lexem, bool scope, Type type, unsigned int mem) {
-    SymbolNode * node = new_symbol_node(lexem, scope, type, mem);
+void insert_node_table(char * lexem, bool scope, DataType data_type, StructureType structure_type, unsigned int mem) {
+    SymbolNode * node = new_symbol_node(lexem, scope, data_type, structure_type, mem);
     push_symbol_node(node);
 }
 
@@ -80,15 +81,6 @@ bool can_declare_subroutine(char * lexem) {
     return true;
 }
 
-// Two symbols are compatible when both have the same data type
-bool are_symbols_compatible(SymbolNode * a, SymbolNode * b) {
-    if (a->type != b->type) {
-        return false;
-    }
-
-    return true;
-}
-
 SymbolNode * get_symbol_from_lexem(char * lexem) {
     for (SymbolNode * current = table; current != NULL; current = current->next) {
         if (strcmp(current->lexem, lexem) == 0) {
@@ -99,9 +91,11 @@ SymbolNode * get_symbol_from_lexem(char * lexem) {
     return NULL;
 }
 
-void insert_type(Type type) {
-    for (SymbolNode * current = table; current->type == VAR || current->type == FUNC; current = current->next) {
-        current->type = type;
+void insert_type(DataType data_type) {
+    for (SymbolNode * current = table; current->structure_type == VAR || current->structure_type == FUNC; current = current->next) {
+        if (current->data_type == UNDEFINED) {
+            current->data_type = data_type;
+        }
 
         if (current->next == NULL) {
             break;

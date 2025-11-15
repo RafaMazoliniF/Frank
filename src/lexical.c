@@ -99,10 +99,16 @@ int get_symbol(char * word){
  * @return ponteiro para o caracter, NULL se houve falha
  */
 char get_next_char() {
-    int c = fgetc(file);
+    int c;
+    
+    do {
+        c = fgetc(file);
+    } while (c == '\r'); 
+
     if (c == '\n') {
         current_line++;
     }
+
     if (c == EOF) return '\0'; 
     return (char)c;
 }
@@ -138,14 +144,14 @@ char * get_next_word() {
     int capacity = 16;     
     int length = 0;        
     char *buffer = malloc(capacity);
-    char ch;
+    int ch;
 
     if (!buffer) {
         exit(EXIT_FAILURE);
     }
 
     // Pula espaços em branco
-    while ((ch = get_next_char(file)) != '\0' && isspace(ch));
+    while ((ch = get_next_char()) != '\0' && isspace(ch));
 
     if (ch == '\0') {
         free(buffer);
@@ -157,7 +163,7 @@ char * get_next_word() {
         do {
             buffer = ensure_buffer_capacity(buffer, &capacity, length);
             buffer[length++] = ch;
-            ch = get_next_char(file);
+            ch = get_next_char();
         } while (ch != '\0' && (isalnum(ch) || ch == '_'));
 
         if (ch != '\0') ungetc(ch, file);
@@ -167,7 +173,7 @@ char * get_next_word() {
         do {
             buffer = ensure_buffer_capacity(buffer, &capacity, length);
             buffer[length++] = ch;
-            ch = get_next_char(file);
+            ch = get_next_char();
         } while (ch != '\0' && isdigit(ch));
 
         if (ch != '\0') ungetc(ch, file);
@@ -177,7 +183,7 @@ char * get_next_word() {
         buffer = ensure_buffer_capacity(buffer, &capacity, length);
         buffer[length++] = ch;
     
-        char next_ch = get_next_char(file);
+        char next_ch = get_next_char();
         if (next_ch != '\0') {
             if ((ch == ':' && next_ch == '=') ||  // :=
                 (ch == '>' && next_ch == '=') ||  // >=
@@ -199,7 +205,7 @@ char * get_next_word() {
 void handle_comment() {
     char * next_word;
     do {
-        next_word = get_next_word(file);
+        next_word = get_next_word();
         if (next_word == NULL) {
             printf("Erro: comentário não fechado\n");
             break;
@@ -217,7 +223,7 @@ void handle_comment() {
 void get_next_token() {
     Token token;
 
-    char *word = get_next_word(file);
+    char *word = get_next_word();
 
     if (word == NULL) {
         token.lexem = NULL;
