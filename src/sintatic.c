@@ -480,7 +480,7 @@ void handle_function_declaration() {
     if (current_token.symbol == SIDENTIFICADOR) {
         // Semantic action: Check if subroutine can be declared and insert into table.
         if (can_declare_subroutine(current_token.lexem)) {
-            insert_node_table(current_token.lexem, true, UNDEFINED, FUNC, 0);
+            insert_node_table(current_token.lexem, true, UNDEFINED, FUNC, l1);
             func = table;
 
             generate(l1, "NULL ", -1, -1);
@@ -532,14 +532,14 @@ void handle_function_declaration() {
 // Função auxiliar para validar tipos e processar segunda expressão
 void process_relational_operator(DataType * type1) {
     if (*type1 != INT) {
-        fprintf(stderr, "ERRO SEMANTICO na linha %d: operação com tipos incompatíveis\n", current_line);
+        fprintf(stderr, "ERRO SEMANTICO na linha %d: operação com tipos incompatíveis1\n", current_line);
         fflush(stderr);
         exit(EXIT_FAILURE);
     }
     get_next_token();
     DataType type2 = handle_simple_expression();
     if (type2 != INT) {
-        fprintf(stderr, "ERRO SEMANTICO na linha %d: operação com tipos incompatíveis\n", current_line);
+        fprintf(stderr, "ERRO SEMANTICO na linha %d: operação com tipos incompatíveis2\n", current_line);
         fflush(stderr);
         exit(EXIT_FAILURE);
     }
@@ -602,7 +602,7 @@ DataType handle_simple_expression() {
     } else {
         if (ref == INT) {
             // Unary sign with non-integer term is a semantic error.
-            fprintf(stderr, "ERRO SEMANTICO na linha %d: operação com tipos incompatíveis\n", current_line);
+            fprintf(stderr, "ERRO SEMANTICO na linha %d: operação com tipos incompatíveis3\n", current_line);
             fflush(stderr);
             exit(EXIT_FAILURE);
         } else {
@@ -620,14 +620,14 @@ DataType handle_simple_expression() {
 
         // Semantic check: 'ou' operator with integer type is an error.
         if (current_token.symbol == SOU && ref == INT) {
-            fprintf(stderr, "ERRO SEMANTICO na linha %d: operação com tipos incompatíveis\n", current_line);
+            fprintf(stderr, "ERRO SEMANTICO na linha %d: operação com tipos incompatíveis4\n", current_line);
             fflush(stderr);
             exit(EXIT_FAILURE);
         }
 
         // Semantic check: Additive operators (+, -) with boolean type is an error.
         else if ((current_token.symbol == SMAIS || current_token.symbol == SMENOS) && ref == BOOL) {
-            fprintf(stderr, "ERRO SEMANTICO na linha %d: operação com tipos incompatíveis\n", current_line);
+            fprintf(stderr, "ERRO SEMANTICO na linha %d: operação com tipos incompatíveis5\n", current_line);
             fflush(stderr);
             exit(EXIT_FAILURE);
         }
@@ -635,7 +635,7 @@ DataType handle_simple_expression() {
         get_next_token();
         // Semantic check: subsequent term must match the expression type.
         if (handle_term() != ref) {
-            fprintf(stderr, "ERRO SEMANTICO na linha %d: operação com tipos incompatíveis\n", current_line);
+            fprintf(stderr, "ERRO SEMANTICO na linha %d: operação com tipos incompatíveis6\n", current_line);
             fflush(stderr);
             exit(EXIT_FAILURE);
         }
@@ -669,6 +669,8 @@ DataType handle_term() {
     Simbolo * operations = (Simbolo*)malloc(100 * sizeof(Simbolo));
     int i_op = 0;
 
+    DataType type_to_return = -1;
+
     // Loop for multiplicative/AND operations.
     while(current_token.symbol == SMULT || current_token.symbol == SDIV || current_token.symbol == SE) {
         operations[i_op] = current_token.symbol;
@@ -684,8 +686,9 @@ DataType handle_term() {
                 fflush(stderr);
                 exit(EXIT_FAILURE);
             }
-            else
-                return INT; // Result is INT.
+            else {
+                type_to_return = INT; // Result is INT.
+            }
         }
         // Semantic check: 'e' (AND) must use BOOL types.
         else {
@@ -694,8 +697,9 @@ DataType handle_term() {
                 fflush(stderr);
                 exit(EXIT_FAILURE);
             }
-            else
-                return BOOL; // Result is BOOL.
+            else {
+                type_to_return = BOOL; // Result is BOOL.
+            }
         }
     }
 
@@ -717,7 +721,11 @@ DataType handle_term() {
 
     free(operations);
 
-    return type1; // Return the type of the factor.
+    if (type_to_return == INT || type_to_return == BOOL) {
+        return type_to_return;
+    } else {
+        return type1; // Return the type of the factor.
+    }
 }
 
 // <fator> ::= (<variável> |

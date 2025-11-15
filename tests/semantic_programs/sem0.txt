@@ -1,35 +1,25 @@
-programa testsimples;
 
-var a,b,c: inteiro;
-    d,f: booleano;
+programa teste_recursao_fatorial;
+var n_global, resultado: inteiro;
 
-procedimento proc1;
-var x,y: inteiro;
-
+funcao fatorial: inteiro;
+var n_local: inteiro; 
 inicio
-    x:= 1;
-    y:= 2;
-    d:= 2 > 1;
-fim;
-
-funcao func1: inteiro;
-var x: inteiro;
-
-procedimento proc2;
-var x,y: inteiro;
-
-inicio
-    x:= 1;
-    y:= 2;
+    n_local := n_global;
+    
+    se n_local <= 1 entao
+        fatorial := 1 
+    senao
+    inicio
+        n_global := n_local - 1; 
+        fatorial := n_local * fatorial;
+    fim;
 fim;
 
 inicio
-    x := 1;
-    proc2;
-    func1:= x;
-fim;
-
-inicio
-    proc1;
-    a := func1;
+    leia(n_global); 
+    
+    resultado := fatorial;
+    
+    escreva(resultado);
 fim.
