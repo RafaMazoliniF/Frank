@@ -1,0 +1,6 @@
+programa falha_parenteses_leia;
+var
+    x: inteiro;
+inicio
+    leia x)
+fim.

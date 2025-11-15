@@ -1,11 +1,7 @@
 #ifndef LEXICAL_H
 #define LEXICAL_H
 
-#include <string.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <ctype.h>
+#include "includes.h"
 
 #define WORD_MAX_LEN 40
 
@@ -48,7 +44,8 @@ typedef enum {
     SDIV,               // div
     SE,                 // e
     SOU,                // ou
-    SNAO                // nao
+    SNAO,                // nao
+    ENDFILE
 } Simbolo;
 
 typedef struct Token {
@@ -67,5 +64,6 @@ int get_symbol(char * word);
 void get_next_token();
 
 extern Token current_token;
+extern int current_line;
 
 #endif
