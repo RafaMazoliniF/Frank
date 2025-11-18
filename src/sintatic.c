@@ -301,7 +301,7 @@ void handle_write_command() {
             if (node != NULL) {
                 if (node->data_type == INT && node->scope == false) {
 
-                    generate(-1, "LDV", node->mem, -1);
+                    generate(-1, "LDV  ", node->mem, -1);
                     generate(-1, "PRN", -1, -1);
 
                     get_next_token();
@@ -465,7 +465,7 @@ void handle_procedure_declaration() {
         exit(EXIT_FAILURE);
     }
     // Semantic action: Pop the current scope.
-    pop_scope();
+    pop_scope(proc);
     proc->mem = l1; // Insert on mem the procedure label
     generate(-1, "RETURN", -1, -1);
 }
@@ -523,7 +523,7 @@ void handle_function_declaration() {
         exit(EXIT_FAILURE);
     }
     // Semantic action: Pop the current scope.
-    pop_scope();
+    pop_scope(func);
     printf("\n\n%d\n\n", l1);
     func->mem = l1; // Insert on mem the function label
     generate(-1, "RETURN", -1, -1);

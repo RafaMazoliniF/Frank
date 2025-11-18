@@ -7,9 +7,13 @@ int label = 0;
 int addr = 1; // Keeps 0 to function return values
 FILE * gen_file = NULL;
 
-void int_to_string(char ** string, int val) {
+void int_to_string(char ** string, int val, bool is_label) {
     if (val >= 0) {
-        sprintf(*string, "%d", val);
+        if (is_label) {
+            sprintf(*string, "%d   ", val);
+        } else {
+            sprintf(*string, "%d", val);
+        }
     } else {
         sprintf(*string, "    ");
     }
@@ -28,15 +32,12 @@ void generate(int label, const char * mnemonic, int param1, int param2) {
     char * sparam1 = malloc(10 * sizeof(char));
     char * sparam2 = malloc(10 * sizeof(char));
     
-    int_to_string(&slabel, label);
-    int_to_string(&sparam1, param1);
-    int_to_string(&sparam2, param2);
+    int_to_string(&slabel, label, true);
+    int_to_string(&sparam1, param1, false);
+    int_to_string(&sparam2, param2, false);
 
-    if (strcmp(mnemonic, "ALLOC") == 0 || strcmp(mnemonic, "DALLOC") == 0) {
-        sprintf(line, "%s %s %s,%s\n", slabel, mnemonic, sparam1, sparam2);
-    } else {
-        sprintf(line, "%s %s %s %s\n", slabel, mnemonic, sparam1, sparam2);
-    }
+    
+    sprintf(line, "%s %s %s %s\n", slabel, mnemonic, sparam1, sparam2);
 
     if (fputs(line, gen_file) == EOF) {
         perror("falaha ao escrever em result.obj");

@@ -41,6 +41,6 @@ bool can_declare_subroutine(char * lexem);
 bool are_symbols_compatible(SymbolNode * a, SymbolNode * b);
 SymbolNode * get_symbol_from_lexem(char * lexem);
 void insert_type(DataType data_type);
-void pop_scope();
+void pop_scope(SymbolNode * final);
 
 #endif
