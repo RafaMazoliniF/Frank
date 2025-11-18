@@ -21,7 +21,7 @@ TESTDIR = tests
 UNITYDIR = unity
 
 # --- EXECUTÁVEIS ---
-TARGET = lexical_analyzer
+TARGET = main
 TEST_TARGET = test_runner
 
 # --- ARQUIVOS FONTE E OBJETO (APLICAÇÃO PRINCIPAL) ---

@@ -32,7 +32,7 @@ void handle_program() {
 
             if (current_token.symbol == SPONTO_VIRGULA) {
                 get_next_token();
-                handle_block(true);
+                handle_block();
 
                 if (current_token.symbol == SPONTO) {
                     get_next_token();
@@ -66,7 +66,7 @@ void handle_program() {
 // <bloco>::= [<etapa de declaração de variáveis>]
 //           [<etapa de declaração de sub-rotinas>]
 //           <comandos>
-void handle_block(bool is_main) {
+void handle_block() {
     int count = handle_variable_declaration_section();
     int addr_to_dealloc = addr;
     
@@ -524,7 +524,6 @@ void handle_function_declaration() {
     }
     // Semantic action: Pop the current scope.
     pop_scope(func);
-    printf("\n\n%d\n\n", l1);
     func->mem = l1; // Insert on mem the function label
     generate(-1, "RETURN", -1, -1);
 }

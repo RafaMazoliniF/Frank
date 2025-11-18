@@ -7,7 +7,7 @@
 
 void handler();
 void handle_program();
-void handle_block(bool is_main);
+void handle_block();
 int handle_variable_declaration_section();
 void handle_variables(int * count);
 void handle_type();

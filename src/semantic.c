@@ -104,20 +104,8 @@ void insert_type(DataType data_type) {
 }
 
 void pop_scope(SymbolNode * final) {
-    for (SymbolNode * current = table; current != NULL; current = current->next) {
-        printf("%s; ", current->lexem);
-    }
-
-    printf("\n\n");
-
     while (table != final && table != NULL) {
         pop_symbol_node();
     }
-
-    for (SymbolNode * current = table; current != NULL; current = current->next) {
-        printf("%s; ", current->lexem);
-    }
-
-    printf("\n\n");
 }
 

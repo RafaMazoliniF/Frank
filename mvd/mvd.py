@@ -1,4 +1,4 @@
-file_path = "result.obj"
+file_path = "gera1.obj"
 P = []   # Program Section (Instruções)
 M = []   # Data Stack Section (Pilha de dados)
 pc = 0   # Program Counter (i)
@@ -24,9 +24,8 @@ with open(file_path, 'r') as file:
 
 # First pass: identificar labels
 for i, operation in enumerate(P):
-    if len(operation) == 1 and operation[0] not in ["HLT", "START", "INV", "NEG", "RD", "PRN", "RETURN"]:
-        # É um label (número sozinho na linha ou formato "L:")
-        label = operation[0].rstrip(':')
+    if len(operation) > 1 and operation[1] == "NULL":
+        label = operation[0]
         labels[label] = i
         print(f"Label '{label}' encontrado na linha {i}")
 
@@ -104,7 +103,6 @@ while True:
         pop_M()
         jumped = True
     elif len(operation) == 1 and operation[0] not in ["HLT", "START", "INV", "NEG", "RD", "PRN", "RETURN"]:
-        # É um label, apenas incrementa PC
         pass
     elif len(operation) == 2 and operation[1] == "NULL": 
         pass
@@ -115,18 +113,16 @@ while True:
         print("Saída: ", M[sp])
         pop_M()
     elif opcode == "ALLOC":
-        # Formato: ALLOC m,n
-        params = operation[1].split(',')
-        m = int(params[0])
-        n = int(params[1])
+        # Alterado: Pega m e n diretamente dos índices (separados por espaço no arquivo)
+        m = int(operation[1])
+        n = int(operation[2])
         for k in range(n):
             push_M(0)
             M[sp] = M[m + k]
     elif opcode == "DALLOC":
-        # Formato: DALLOC m,n
-        params = operation[1].split(',')
-        m = int(params[0])
-        n = int(params[1])
+        # Alterado: Pega m e n diretamente dos índices (separados por espaço no arquivo)
+        m = int(operation[1])
+        n = int(operation[2])
         for k in reversed(range(n)):
             M[m + k] = M[sp]
             pop_M()

@@ -1,8 +1,9 @@
 #include "sintatic.h"
 
 int main() {
-    getFile("sint1.txt");
-    handler();
+    getFile("tests/semantic_programs/sem0.txt");
+    
+    handle_program();
 
     fclose(file);
 
