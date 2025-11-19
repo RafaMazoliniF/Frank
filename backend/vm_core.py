@@ -1,16 +1,11 @@
 # backend/vm_core.py
 # Máquina Virtual Didática (MVD)
 #
-# Regras principais implementadas:
-# - Labels numéricos/textuais reconhecidos quando aparecem no início da linha:
-#     Ex: "1 NULL", "2: NULL", "L1 NULL", "LOOP: NULL"
-# - NÃO substituir tokens numéricos usados como argumentos de memória
-#   (ex: ALLOC 0 1) — para evitar ALLOC 0 1 -> ALLOC 0 <endereço do label 1>
-# - Substituição de labels por endereços ocorre apenas para instruções de
-#   salto/chamada: CALL, JMP, JMPF (argumentos de controle de fluxo)
-# - CALL empilha endereço de retorno na pilha de dados (M[++s] = pc+1)
-# - RETURN desempilha endereço de retorno da pilha de dados
-# - RD exige input (lança VMError se fila vazia); enqueue_input "acorda" a VM
+# - Montador em duas passagens (detecta labels), mas NÃO substitui tokens por endereços.
+# - Execução (step) usa bloco de instruções fiel ao while True que você forneceu,
+#   executando exatamente uma instrução por chamada a step().
+# - CALL empilha retorno na pilha de dados; RETURN desempilha.
+# - RD levanta VMError quando fila de input vazia; enqueue_input "acorda" a VM.
 
 class VMError(Exception):
     pass
@@ -21,15 +16,15 @@ class VM:
         self.reset_all()
 
     def reset_all(self):
-        # programa / montagem
-        self.P = []            # lista de instruções tokenizadas (cada instrução -> list[str])
+        # Programa / montagem
+        self.P = []            # lista de instruções tokenizadas
         self.labels = {}       # mapa label -> endereço (índice em P)
 
-        # memória / pilha de dados
+        # Memória / pilha de dados
         self.M = {}            # memória (endereço:int -> valor:int)
-        self.s = -1            # topo da pilha (índice)
+        self.s = -1            # topo da pilha (sp)
 
-        # controle de execução
+        # Controle de execução
         self.pc = 0
         self.halted = False
         self.last_error = None
@@ -43,13 +38,12 @@ class VM:
     # -----------------------
     def load_program(self, asm_text):
         """
-        Montador em duas passagens.
-        - Detecta labels quando aparecem no início da linha (numéricos ou textuais),
-          aceitando espaços/tabs variados e opcional ':'.
-        - Substitui labels por endereços SOMENTE para argumentos de controle de fluxo:
-          CALL, JMP, JMPF.
+        Carrega programa Assembly:
+         - aceita labels no início da linha (numéricos ou textuais), com ou sem ':'.
+         - registra labels em self.labels -> índice em P.
+         - mantém as instruções em self.P sem substituir tokens.
         """
-        # reset parcial (mantém instância)
+        # reset parcial
         self.P = []
         self.labels = {}
         self.M = {}
@@ -70,7 +64,7 @@ class VM:
 
         raw_lines = asm_text.splitlines()
 
-        # --- 1ª passagem: registrar labels (apenas se aparecerem no início da linha) ---
+        # 1ª passagem: registrar labels e construir P (sem substituir)
         for raw in raw_lines:
             if raw is None:
                 continue
@@ -83,54 +77,49 @@ class VM:
                 continue
 
             first_token = parts[0]
-
-            # normalize: remover eventual ':' do final
             t_clean = first_token.rstrip(':')
 
-            # Se first_token é um número puro, consideramos label numérico
-            # (apenas se estiver no início da linha)
+            # se é número puro no início -> label numérico
             if t_clean.isdigit():
                 label = t_clean
-                # registra label apontando para próximo endereço em P
                 self.labels[label] = len(self.P)
-                # criar alias 'L<num>' para conveniência (ex: 'L1' -> '1' e vice-versa)
+                # criar alias L<num>
                 l_alias = 'L' + label
                 if l_alias not in self.labels:
                     self.labels[l_alias] = self.labels[label]
-                # se houver instrução após o número, anexa
+                # se tiver instrução depois do label, anexa
                 if len(parts) > 1:
                     self.P.append(parts[1:])
-                # caso contrário (linha só com "N" sem instrução) => nada a adicionar
+                else:
+                    # label sozinho -> tratamos como NULL (linha de rótulo)
+                    self.P.append(['NULL'])
                 continue
 
-            # Se token termina com ":" (ex: "L1:") -> label textual
+            # se termina com ':' -> label textual
             if first_token.endswith(':'):
                 label = t_clean
                 self.labels[label] = len(self.P)
-                # criar alias numérico se label for L<num>
+                # alias numérico se for L<num>
                 if label.upper().startswith('L') and label[1:].isdigit():
                     num = label[1:]
                     if num not in self.labels:
                         self.labels[num] = self.labels[label]
-                # se restante existe, anexa como instrução
+                # se houver instrução na mesma linha
                 if len(parts) > 1:
                     self.P.append(parts[1:])
                 else:
-                    # se só "LABEL:" sem instrução, tratamos como NULL
                     self.P.append(['NULL'])
                 continue
 
-            # caso: linha começa com instrução (first token é instr válida)
+            # se começa com instrução válida -> instrução normal
             if t_clean.upper() in valid_instr:
                 self.P.append(parts)
                 continue
 
-            # caso: linha começa com palavra não-instrucao (p.ex. 'L1 NULL' sem ':' ou 'LABEL NULL')
-            # se houver "NULL" logo após, tratamos isso como label também
+            # se começa com palavra não-instrucao e próxima token é NULL, tratamos como label
             if len(parts) >= 2 and parts[1].upper() == 'NULL':
                 label = t_clean
                 self.labels[label] = len(self.P)
-                # alias 'L<num>' se for L#
                 if label.upper().startswith('L') and label[1:].isdigit():
                     num = label[1:]
                     if num not in self.labels:
@@ -139,12 +128,10 @@ class VM:
                     lalias = 'L' + label
                     if lalias not in self.labels:
                         self.labels[lalias] = self.labels[label]
-                # append NULL instruction
                 self.P.append(['NULL'])
                 continue
 
-            # caso geral: assumimos que a linha é 'LABEL instr...' sem ':' (por segurança)
-            # registra label e anexa o que resta
+            # caso geral: linha começa com token não-instrucao -> tratamos como label sem ':'
             if t_clean not in valid_instr:
                 label = t_clean
                 self.labels[label] = len(self.P)
@@ -158,27 +145,11 @@ class VM:
                     self.P.append(['NULL'])
                 continue
 
-            # fallback — tratar como instrução
+            # fallback: tratar como instrução
             self.P.append(parts)
 
-        # --- 2ª passagem: substituir labels por endereços, MAS somente para ops de fluxo de controle ---
-        for i, instr in enumerate(self.P):
-            if not instr:
-                continue
-            op = str(instr[0]).upper()
-
-            # Apenas CALL, JMP, JMPF têm seu argumento 1 substituído por endereço de label, quando aplicável
-            if op in ('CALL', 'JMP', 'JMPF'):
-                # se houver argumento
-                if len(instr) > 1:
-                    tok = str(instr[1]).rstrip(':')
-                    if tok in self.labels:
-                        instr[1] = str(self.labels[tok])
-                # guarda de volta
-                self.P[i] = instr
-            else:
-                # para outras instruções, não alteramos tokens (mantemos literais numéricos)
-                self.P[i] = instr
+        # OBS: NÃO fazemos substituição de tokens por endereços aqui.
+        # Em tempo de execução (step) usamos self.labels[label] para JMP/CALL/JMPF.
 
     # -----------------------
     # Reiniciar execução (mantém programa carregado)
@@ -193,9 +164,10 @@ class VM:
         self.input_queue = []
 
     # -----------------------
-    # Execução: step
+    # Execução: step (1 instrução por vez)
     # -----------------------
     def step(self):
+        # condições de parada
         if self.halted or self.pc < 0 or self.pc >= len(self.P):
             self.halted = True
             return
@@ -203,256 +175,203 @@ class VM:
         try:
             instr = self.P[self.pc]
             if not instr:
+                # linha vazia ou None -> avança
                 self.pc += 1
                 return
 
-            op = str(instr[0]).upper()
+            # Prepare variáveis no estilo do seu while True
+            operation = instr
+            opcode = str(operation[0]).upper()
 
-            def parse_arg(idx):
-                if len(instr) <= idx:
-                    return None
-                tok = instr[idx]
-                ts = str(tok)
-                # se já for representação numérica (string de dígitos, possivelmente negativo)
-                if ts.lstrip('-').isdigit():
-                    return int(ts)
-                return tok
+            # M, sp, pc locais (iremos reatribuir para self no final)
+            M = self.M
+            sp = self.s
+            pc = self.pc
+            labels = self.labels
 
-            arg1 = parse_arg(1)
-            arg2 = parse_arg(2)
+            # helpers push/pop mantendo sp e M locais
+            def push_M(v):
+                nonlocal sp, M
+                sp += 1
+                M[sp] = v
 
-            # --- instruções ---
-            if op == "START":
-                self.s = -1
-                self.pc += 1
-                return
+            def pop_M():
+                nonlocal sp
+                if sp < 0:
+                    raise VMError("Pilha vazia")
+                sp -= 1
 
-            if op == "LDC":
-                self.s += 1
-                self.M[self.s] = int(arg1)
-                self.pc += 1
-                return
+            jumped = False
 
-            if op == "LDV":
-                self.s += 1
-                self.M[self.s] = self.M.get(int(arg1), 0)
-                self.pc += 1
-                return
+            # ============= bloco de instruções (copiado do seu while True) =============
 
-            if op == "ADD":
-                if self.s < 1:
-                    raise VMError("ADD: pilha insuficiente")
-                self.M[self.s - 1] = self.M.get(self.s - 1, 0) + self.M.get(self.s, 0)
-                self.s -= 1
-                self.pc += 1
-                return
-
-            if op == "SUB":
-                if self.s < 1:
-                    raise VMError("SUB: pilha insuficiente")
-                self.M[self.s - 1] = self.M.get(self.s - 1, 0) - self.M.get(self.s, 0)
-                self.s -= 1
-                self.pc += 1
-                return
-
-            if op == "MULT":
-                if self.s < 1:
-                    raise VMError("MULT: pilha insuficiente")
-                self.M[self.s - 1] = self.M.get(self.s - 1, 0) * self.M.get(self.s, 0)
-                self.s -= 1
-                self.pc += 1
-                return
-
-            if op == "DIVI":
-                if self.s < 1:
-                    raise VMError("DIVI: pilha insuficiente")
-                if self.M.get(self.s, 0) == 0:
-                    raise VMError("Divisão por zero")
-                self.M[self.s - 1] = self.M.get(self.s - 1, 0) // self.M.get(self.s, 0)
-                self.s -= 1
-                self.pc += 1
-                return
-
-            if op == "INV":
-                if self.s < 0:
-                    raise VMError("INV: pilha vazia")
-                self.M[self.s] = -self.M.get(self.s, 0)
-                self.pc += 1
-                return
-
-            if op == "AND":
-                if self.s < 1:
-                    raise VMError("AND: pilha insuficiente")
-                self.M[self.s - 1] = 1 if (self.M.get(self.s - 1, 0) == 1 and self.M.get(self.s, 0) == 1) else 0
-                self.s -= 1
-                self.pc += 1
-                return
-
-            if op == "OR":
-                if self.s < 1:
-                    raise VMError("OR: pilha insuficiente")
-                self.M[self.s - 1] = 1 if (self.M.get(self.s - 1, 0) == 1 or self.M.get(self.s, 0) == 1) else 0
-                self.s -= 1
-                self.pc += 1
-                return
-
-            if op == "NEG":
-                if self.s < 0:
-                    raise VMError("NEG: pilha vazia")
-                self.M[self.s] = 1 - self.M.get(self.s, 0)
-                self.pc += 1
-                return
-
-            if op == "CME":
-                if self.s < 1:
-                    raise VMError("CME: pilha insuficiente")
-                self.M[self.s - 1] = 1 if (self.M.get(self.s - 1, 0) < self.M.get(self.s, 0)) else 0
-                self.s -= 1
-                self.pc += 1
-                return
-
-            if op == "CMA":
-                if self.s < 1:
-                    raise VMError("CMA: pilha insuficiente")
-                self.M[self.s - 1] = 1 if (self.M.get(self.s - 1, 0) > self.M.get(self.s, 0)) else 0
-                self.s -= 1
-                self.pc += 1
-                return
-
-            if op == "CEQ":
-                if self.s < 1:
-                    raise VMError("CEQ: pilha insuficiente")
-                self.M[self.s - 1] = 1 if (self.M.get(self.s - 1, 0) == self.M.get(self.s, 0)) else 0
-                self.s -= 1
-                self.pc += 1
-                return
-
-            if op == "CDIF":
-                if self.s < 1:
-                    raise VMError("CDIF: pilha insuficiente")
-                self.M[self.s - 1] = 1 if (self.M.get(self.s - 1, 0) != self.M.get(self.s, 0)) else 0
-                self.s -= 1
-                self.pc += 1
-                return
-
-            if op == "CMEQ":
-                if self.s < 1:
-                    raise VMError("CMEQ: pilha insuficiente")
-                self.M[self.s - 1] = 1 if (self.M.get(self.s - 1, 0) <= self.M.get(self.s, 0)) else 0
-                self.s -= 1
-                self.pc += 1
-                return
-
-            if op == "CMAQ":
-                if self.s < 1:
-                    raise VMError("CMAQ: pilha insuficiente")
-                self.M[self.s - 1] = 1 if (self.M.get(self.s - 1, 0) >= self.M.get(self.s, 0)) else 0
-                self.s -= 1
-                self.pc += 1
-                return
-
-            if op == "STR":
-                if self.s < 0:
-                    raise VMError("STR: pilha vazia")
-                if arg1 is None:
-                    raise VMError("STR: argumento ausente")
-                addr = int(arg1)
-                self.M[addr] = self.M.get(self.s, 0)
-                self.s -= 1
-                self.pc += 1
-                return
-
-            if op == "JMP":
-                if arg1 is None:
-                    raise VMError("JMP: argumento ausente")
-                self.pc = int(arg1)
-                return
-
-            if op == "JMPF":
-                if self.s < 0:
-                    raise VMError("JMPF: pilha vazia")
-                cond = self.M.get(self.s, 0)
-                self.s -= 1
-                if cond == 0:
-                    if arg1 is None:
-                        raise VMError("JMPF: argumento ausente")
-                    self.pc = int(arg1)
-                else:
-                    self.pc += 1
-                return
-
-            if op == "NULL":
-                self.pc += 1
-                return
-
-            if op == "RD":
-                self.s += 1
-                if self.input_queue:
-                    self.M[self.s] = int(self.input_queue.pop(0))
-                    self.pc += 1
-                else:
-                    raise VMError("RD attempted but input queue empty")
-                return
-
-            if op == "PRN":
-                if self.s < 0:
-                    raise VMError("PRN: pilha vazia")
-                self.output.append(self.M.get(self.s, 0))
-                self.s -= 1
-                self.pc += 1
-                return
-
-            if op == "ALLOC":
-                if arg1 is None or arg2 is None:
-                    raise VMError("ALLOC: argumentos ausentes")
-                m = int(arg1)
-                n = int(arg2)
-                for k in range(n):
-                    self.s += 1
-                    self.M[self.s] = self.M.get(m + k, 0)
-                self.pc += 1
-                return
-
-            if op == "DALLOC":
-                if arg1 is None or arg2 is None:
-                    raise VMError("DALLOC: argumentos ausentes")
-                m = int(arg1)
-                n = int(arg2)
-                if self.s < n - 1:
-                    raise VMError("DALLOC: pilha insuficiente")
-                for k in range(n - 1, -1, -1):
-                    self.M[m + k] = self.M.get(self.s, 0)
-                    self.s -= 1
-                self.pc += 1
-                return
-
-            if op == "CALL":
-                if arg1 is None:
-                    raise VMError("CALL: argumento ausente")
-                self.s += 1
-                self.M[self.s] = self.pc + 1
-                self.pc = int(arg1)
-                return
-
-            if op == "RETURN":
-                if self.s < 0:
-                    raise VMError("RETURN: pilha vazia")
-                self.pc = int(self.M.get(self.s, 0))
-                self.s -= 1
-                return
-
-            if op == "HLT":
+            if opcode == "HLT":
                 self.halted = True
-                return
 
-            raise VMError(f"Instrução inválida: {op}")
+            elif opcode == "START":
+                sp = -1
+
+            elif opcode == "LDC":
+                value = int(operation[1])
+                push_M(value)
+
+            elif opcode == "LDV":
+                value = int(operation[1])
+                push_M(M.get(value, 0))
+
+            elif opcode == "ADD":
+                M[sp - 1] = M.get(sp - 1, 0) + M.get(sp, 0)
+                pop_M()
+
+            elif opcode == "SUB":
+                M[sp - 1] = M.get(sp - 1, 0) - M.get(sp, 0)
+                pop_M()
+
+            elif opcode == "MULT":
+                M[sp - 1] = M.get(sp - 1, 0) * M.get(sp, 0)
+                pop_M()
+
+            elif opcode == "DIVI":
+                # cuidado com divisão por zero (vai lançar se M[sp] == 0)
+                if M.get(sp, 0) == 0:
+                    raise VMError("Divisão por zero")
+                M[sp - 1] = M.get(sp - 1, 0) // M.get(sp, 0)
+                pop_M()
+
+            elif opcode == "INV":
+                M[sp] = -M.get(sp, 0)
+
+            elif opcode == "AND":
+                M[sp - 1] = 1 if M.get(sp - 1, 0) == 1 and M.get(sp, 0) == 1 else 0
+                pop_M()
+
+            elif opcode == "OR":
+                M[sp - 1] = 0 if M.get(sp - 1, 0) == 0 and M.get(sp, 0) == 0 else 1
+                pop_M()
+
+            elif opcode == "NEG":
+                M[sp] = 1 - M.get(sp, 0)
+
+            elif opcode == "CME":
+                M[sp - 1] = 1 if M.get(sp - 1, 0) < M.get(sp, 0) else 0
+                pop_M()
+
+            elif opcode == "CMA":
+                M[sp - 1] = 1 if M.get(sp - 1, 0) > M.get(sp, 0) else 0
+                pop_M()
+
+            elif opcode == "CEQ":
+                M[sp - 1] = 1 if M.get(sp - 1, 0) == M.get(sp, 0) else 0
+                pop_M()
+
+            elif opcode == "CDIF":
+                M[sp - 1] = 1 if M.get(sp - 1, 0) != M.get(sp, 0) else 0
+                pop_M()
+
+            elif opcode == "CMEQ":
+                M[sp - 1] = 1 if M.get(sp - 1, 0) <= M.get(sp, 0) else 0
+                pop_M()
+
+            elif opcode == "CMAQ":
+                M[sp - 1] = 1 if M.get(sp - 1, 0) >= M.get(sp, 0) else 0
+                pop_M()
+
+            elif opcode == "STR":
+                value = int(operation[1])
+                M[value] = M.get(sp, 0)
+                pop_M()
+
+            elif opcode == "JMP":
+                label = str(operation[1])
+                if label not in labels:
+                    raise VMError(f"JMP: rótulo '{label}' não encontrado")
+                pc = labels[label]
+                jumped = True
+
+            elif opcode == "JMPF":
+                label = str(operation[1])
+                if sp < 0:
+                    raise VMError("JMPF: pilha vazia")
+                if M.get(sp, 0) == 0:
+                    if label not in labels:
+                        raise VMError(f"JMPF: rótulo '{label}' não encontrado")
+                    pc = labels[label]
+                else:
+                    pc += 1
+                pop_M()
+                jumped = True
+
+            elif opcode == "NULL":
+                # nada a fazer
+                pass
+
+            elif opcode == "RD":
+                # consome da fila de input; se vazia, sinaliza erro para frontend
+                if not self.input_queue:
+                    raise VMError("RD attempted but input queue empty")
+                value = int(self.input_queue.pop(0))
+                push_M(value)
+
+            elif opcode == "PRN":
+                self.output.append(M.get(sp, 0))
+                pop_M()
+
+            elif opcode == "ALLOC":
+                # ALLOC m n -> para k in 0..n-1: push M[m+k]
+                if len(operation) < 3:
+                    raise VMError("ALLOC: argumentos ausentes")
+                m = int(operation[1])
+                n = int(operation[2])
+                for k in range(n):
+                    push_M(M.get(m + k, 0))
+
+            elif opcode == "DALLOC":
+                # DALLOC m n -> para k=n-1..0: M[m+k] = pop()
+                if len(operation) < 3:
+                    raise VMError("DALLOC: argumentos ausentes")
+                m = int(operation[1])
+                n = int(operation[2])
+                if sp < n - 1:
+                    raise VMError("DALLOC: pilha insuficiente")
+                for k in reversed(range(n)):
+                    M[m + k] = M.get(sp, 0)
+                    pop_M()
+
+            elif opcode == "CALL":
+                label = str(operation[1])
+                if label not in labels:
+                    raise VMError(f"CALL: rótulo '{label}' não encontrado")
+                # empilha endereço de retorno e salta
+                push_M(pc + 1)
+                pc = labels[label]
+                jumped = True
+
+            elif opcode == "RETURN":
+                if sp < 0:
+                    raise VMError("RETURN: pilha vazia")
+                pc = int(M.get(sp, 0))
+                pop_M()
+                jumped = True
+
+            else:
+                raise VMError(f"Instrução inválida: {opcode}")
+
+            # ============= fim do bloco de instruções =============
+
+            # gravar de volta os valores locais para o objeto
+            self.s = sp
+            self.M = M
+            # se houve salto, pc já ajustado; caso contrário incrementa
+            self.pc = pc if jumped else (pc + 1)
 
         except VMError as e:
+            # em caso de RD sem input, não marcamos halted permanentemente (frontend lida com isso)
             self.last_error = str(e)
             if "RD attempted" in str(e):
                 self.halted = False
             else:
                 self.halted = True
+            # propaga para o Flask (app.py captura e devolve)
             raise
         except Exception as e:
             self.halted = True
@@ -491,7 +410,12 @@ class VM:
         }
 
     def dump_program(self):
-        labels_rev = {v: k for k, v in self.labels.items()}
+        # tenta reconstruir labels inversos (exibindo um dos nomes possíveis)
+        labels_rev = {}
+        for k, v in self.labels.items():
+            # para cada endereço guarda o primeiro label encontrado
+            if v not in labels_rev:
+                labels_rev[v] = k
         lines = []
         for i, instr in enumerate(self.P):
             lbl = labels_rev.get(i, "")

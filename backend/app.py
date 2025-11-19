@@ -4,7 +4,7 @@ import os
 from vm_core import VM, VMError
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-FRONTEND_DIR = os.path.normpath(os.path.join(HERE, '..', 'frontend'))
+FRONTEND_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend"))
 
 app = Flask(__name__, static_folder=FRONTEND_DIR, static_url_path='')
 CORS(app)

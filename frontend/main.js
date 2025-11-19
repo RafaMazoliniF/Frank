@@ -1,3 +1,5 @@
+const BACKEND = "http://127.0.0.1:5000";
+
 const editor = document.getElementById('editor');
 const btnLoad = document.getElementById('btnLoad');
 const btnStep = document.getElementById('btnStep');
@@ -15,8 +17,8 @@ const logView = document.getElementById('logView');
 const exampleSelect = document.getElementById('exampleSelect');
 const btnLoadExample = document.getElementById('btnLoadExample');
 
-async function api(path, opts) {
-  const res = await fetch(path, opts);
+async function api(path, opts = {}) {
+  const res = await fetch(BACKEND + path, opts);
   return res.json();
 }
 
@@ -52,7 +54,9 @@ async function loadProgram() {
   }
 }
 
-// 🔹 NOVO: carregar arquivo do PC
+// ------------------------
+// UPLOAD DE ARQUIVO
+// ------------------------
 btnUpload.onclick = async () => {
   if (fileInput.files.length === 0) {
     alert("Escolha um arquivo!");
@@ -62,35 +66,39 @@ btnUpload.onclick = async () => {
   let file = fileInput.files[0];
   let text = await file.text();
 
-  const r = await fetch("/upload_program", {
+  const r = await api("/upload_program", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ program: text })
   });
 
-  const data = await r.json();
-
-  if (data.status === "ok") {
+  if (r.status === "ok") {
     editor.value = text;
     log("Arquivo carregado com sucesso.");
     updateState();
   } else {
-    log("Erro ao carregar arquivo: " + data.error);
+    log("Erro ao carregar arquivo: " + r.error);
   }
 };
 
+// ------------------------
+// STEP
+// ------------------------
 async function step() {
   const r = await api('/step', { method: 'POST' });
 
   if (r.status === 'error' &&
       r.message.toLowerCase().includes('rd attempted')) {
-    const val = prompt("Digite um valor para RD:");
+
+    const val = await window.electronAPI.askInput("Digite um valor para RD:");
+
     if (val !== null) {
       await api('/input', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ value: val })
       });
+
       const again = await api('/step', { method: 'POST' });
       updateFromSnapshot(again.snapshot);
       return;
@@ -100,6 +108,9 @@ async function step() {
   updateFromSnapshot(r.snapshot);
 }
 
+// ------------------------
+// RUN
+// ------------------------
 async function run() {
   const r = await api('/run', {
     method: 'POST',
@@ -109,18 +120,22 @@ async function run() {
 
   if (r.status === 'error' &&
       r.message.toLowerCase().includes('rd attempted')) {
-    const val = prompt("Digite um valor para RD:");
+
+    const val = await window.electronAPI.askInput("Digite um valor para RD:");
+
     if (val !== null) {
       await api('/input', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ value: val })
       });
+
       const again = await api('/run', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({ limit: 1000000 })
       });
+
       updateFromSnapshot(again.snapshot);
       return;
     }
@@ -129,6 +144,7 @@ async function run() {
   updateFromSnapshot(r.snapshot);
 }
 
+// ------------------------
 async function reset() {
   const r = await api('/reset', { method: 'POST' });
   updateFromSnapshot(r.snapshot);
