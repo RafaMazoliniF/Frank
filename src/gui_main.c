@@ -116,7 +116,91 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrev, LPSTR lpCmdLine, int nC
 
 GtkWidget *text_view_in;
 GtkWidget *text_view_out;
+GtkWidget *window; // Variável global para a janela principal (para os diálogos)
 
+// --- Função para ABRIR arquivo (Upload) ---
+void on_open_clicked(GtkWidget *widget, gpointer data) {
+    GtkWidget *dialog;
+    GtkFileChooserAction action = GTK_FILE_CHOOSER_ACTION_OPEN;
+    gint res;
+
+    dialog = gtk_file_chooser_dialog_new("Abrir Código Fonte",
+                                         GTK_WINDOW(window),
+                                         action,
+                                         "_Cancelar",
+                                         GTK_RESPONSE_CANCEL,
+                                         "_Abrir",
+                                         GTK_RESPONSE_ACCEPT,
+                                         NULL);
+
+    res = gtk_dialog_run(GTK_DIALOG(dialog));
+    if (res == GTK_RESPONSE_ACCEPT) {
+        char *filename;
+        GtkFileChooser *chooser = GTK_FILE_CHOOSER(dialog);
+        filename = gtk_file_chooser_get_filename(chooser);
+        
+        char *content = NULL;
+        gsize length;
+        GError *error = NULL;
+
+        // Lê o conteúdo do arquivo selecionado
+        if (g_file_get_contents(filename, &content, &length, &error)) {
+            GtkTextBuffer *buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(text_view_in));
+            gtk_text_buffer_set_text(buffer, content, length);
+            g_free(content);
+        } else {
+            fprintf(stderr, "Erro ao abrir arquivo: %s\n", error->message);
+            g_error_free(error);
+        }
+        g_free(filename);
+    }
+    gtk_widget_destroy(dialog);
+}
+
+// --- Função para SALVAR arquivo (Gerar Saída) ---
+void on_save_clicked(GtkWidget *widget, gpointer data) {
+    GtkWidget *dialog;
+    GtkFileChooserAction action = GTK_FILE_CHOOSER_ACTION_SAVE;
+    gint res;
+
+    dialog = gtk_file_chooser_dialog_new("Salvar Arquivo Objeto",
+                                         GTK_WINDOW(window),
+                                         action,
+                                         "_Cancelar",
+                                         GTK_RESPONSE_CANCEL,
+                                         "_Salvar",
+                                         GTK_RESPONSE_ACCEPT,
+                                         NULL);
+    
+    // Sugere um nome padrão
+    GtkFileChooser *chooser = GTK_FILE_CHOOSER(dialog);
+    gtk_file_chooser_set_current_name(chooser, "meu_programa.obj");
+
+    res = gtk_dialog_run(GTK_DIALOG(dialog));
+    if (res == GTK_RESPONSE_ACCEPT) {
+        char *filename;
+        filename = gtk_file_chooser_get_filename(chooser);
+
+        // Pega o texto da área de saída
+        GtkTextBuffer *buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(text_view_out));
+        GtkTextIter start, end;
+        gtk_text_buffer_get_bounds(buffer, &start, &end);
+        char *text = gtk_text_buffer_get_text(buffer, &start, &end, FALSE);
+
+        // Salva no arquivo escolhido
+        GError *error = NULL;
+        if (!g_file_set_contents(filename, text, -1, &error)) {
+             fprintf(stderr, "Erro ao salvar arquivo: %s\n", error->message);
+             g_error_free(error);
+        }
+        
+        g_free(text);
+        g_free(filename);
+    }
+    gtk_widget_destroy(dialog);
+}
+
+// Mantém a função de compilar existente
 void on_compile_clicked(GtkWidget *widget, gpointer data) {
     GtkTextBuffer *buffer_in = gtk_text_view_get_buffer(GTK_TEXT_VIEW(text_view_in));
     GtkTextIter start, end;
@@ -127,7 +211,6 @@ void on_compile_clicked(GtkWidget *widget, gpointer data) {
     if (tmp) { fprintf(tmp, "%s", text); fclose(tmp); }
     g_free(text);
 
-    // Reseta ambiente
     gui_mode = 1;
     gui_error_msg[0] = '\0';
     current_line = 1; label = 0; addr = 1; init_table();
@@ -148,7 +231,6 @@ void on_compile_clicked(GtkWidget *widget, gpointer data) {
              gtk_text_buffer_set_text(buffer_out, "Erro: Arquivo objeto nao gerado.", -1);
         }
     } else {
-        // Falha
         if(file) fclose(file);
         gtk_text_buffer_set_text(buffer_out, gui_error_msg, -1);
     }
@@ -157,7 +239,7 @@ void on_compile_clicked(GtkWidget *widget, gpointer data) {
 int main(int argc, char *argv[]) {
     gtk_init(&argc, &argv);
 
-    GtkWidget *window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+    window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
     gtk_window_set_title(GTK_WINDOW(window), "Frank IDE (Linux)");
     gtk_window_set_default_size(GTK_WINDOW(window), 800, 600);
     g_signal_connect(window, "destroy", G_CALLBACK(gtk_main_quit), NULL);
@@ -165,19 +247,43 @@ int main(int argc, char *argv[]) {
     GtkWidget *box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
     gtk_container_add(GTK_CONTAINER(window), box);
 
+    // --- Toolbar de Botões ---
+    GtkWidget *button_box = gtk_button_box_new(GTK_ORIENTATION_HORIZONTAL);
+    gtk_button_box_set_layout(GTK_BUTTON_BOX(button_box), GTK_BUTTONBOX_START);
+    gtk_box_pack_start(GTK_BOX(box), button_box, FALSE, FALSE, 5);
+
+    // Botão ABRIR
+    GtkWidget *btn_open = gtk_button_new_with_label("Abrir Arquivo");
+    g_signal_connect(btn_open, "clicked", G_CALLBACK(on_open_clicked), NULL);
+    gtk_container_add(GTK_CONTAINER(button_box), btn_open);
+
+    // Botão COMPILAR
+    GtkWidget *btn_compile = gtk_button_new_with_label("COMPILAR");
+    g_signal_connect(btn_compile, "clicked", G_CALLBACK(on_compile_clicked), NULL);
+    gtk_container_add(GTK_CONTAINER(button_box), btn_compile);
+
+    // Botão SALVAR
+    GtkWidget *btn_save = gtk_button_new_with_label("Salvar Saída");
+    g_signal_connect(btn_save, "clicked", G_CALLBACK(on_save_clicked), NULL);
+    gtk_container_add(GTK_CONTAINER(button_box), btn_save);
+    // -------------------------
+
     // Entrada
+    GtkWidget *lbl_in = gtk_label_new("Código Fonte:");
+    gtk_widget_set_halign(lbl_in, GTK_ALIGN_START);
+    gtk_box_pack_start(GTK_BOX(box), lbl_in, FALSE, FALSE, 0);
+
     GtkWidget *scrolled_in = gtk_scrolled_window_new(NULL, NULL);
-    gtk_widget_set_size_request(scrolled_in, -1, 300);
+    gtk_widget_set_size_request(scrolled_in, -1, 250); // Ajuste altura
     text_view_in = gtk_text_view_new();
     gtk_container_add(GTK_CONTAINER(scrolled_in), text_view_in);
     gtk_box_pack_start(GTK_BOX(box), scrolled_in, TRUE, TRUE, 0);
 
-    // Botão
-    GtkWidget *btn = gtk_button_new_with_label("COMPILAR");
-    g_signal_connect(btn, "clicked", G_CALLBACK(on_compile_clicked), NULL);
-    gtk_box_pack_start(GTK_BOX(box), btn, FALSE, FALSE, 5);
-
     // Saída
+    GtkWidget *lbl_out = gtk_label_new("Código Objeto (MVD):");
+    gtk_widget_set_halign(lbl_out, GTK_ALIGN_START);
+    gtk_box_pack_start(GTK_BOX(box), lbl_out, FALSE, FALSE, 0);
+
     GtkWidget *scrolled_out = gtk_scrolled_window_new(NULL, NULL);
     text_view_out = gtk_text_view_new();
     gtk_text_view_set_editable(GTK_TEXT_VIEW(text_view_out), FALSE);
