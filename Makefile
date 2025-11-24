@@ -1,97 +1,49 @@
-# Compilador
-CC = gcc
+# Makefile Híbrido Windows/Linux
 
-# --- FLAGS ---
-# Flags base, usadas em todas as compilações
+CC = gcc
 BASE_CFLAGS = -Wall -Wextra -std=c99 -Iinclude -Iunity
 
-# Flags de Debug (padrão)
-DEBUG_CFLAGS = -g
-
-# Flags de Release (usadas pelo target 'release')
-RELEASE_CFLAGS = -O2
-
-# CFLAGS padrão é o modo debug (com -g)
-CFLAGS = $(BASE_CFLAGS) $(DEBUG_CFLAGS)
-
-# --- DIRETÓRIOS ---
+# Diretórios e Arquivos
 SRCDIR = src
 INCDIR = include
-TESTDIR = tests
-UNITYDIR = unity
+# Pega todos os .c, exceto o main.c original (que é CLI) e o gui_main.c (que tratamos separado)
+COMMON_SOURCES = $(filter-out $(SRCDIR)/main.c $(SRCDIR)/gui_main.c, $(wildcard $(SRCDIR)/*.c))
+# Adiciona o utilitário de GUI
+COMMON_SOURCES += $(SRCDIR)/gui_utils.c
+COMMON_OBJECTS = $(COMMON_SOURCES:.c=.o)
 
-# --- EXECUTÁVEIS ---
-TARGET = main
-TEST_TARGET = test_runner
+TARGET_GUI = frank_ide
 
-# --- ARQUIVOS FONTE E OBJETO (APLICAÇÃO PRINCIPAL) ---
-SOURCES = $(wildcard $(SRCDIR)/*.c)
-OBJECTS = $(SOURCES:.c=.o)
-APP_OBJECTS_NO_MAIN = $(filter-out $(SRCDIR)/main.o, $(OBJECTS))
+# Detecção de SO
+ifeq ($(OS),Windows_NT)
+    # --- Configuração Windows ---
+    EXT = .exe
+    GUI_FLAGS = -lgdi32 -mwindows
+    RM = del /Q
+    FIX_PATH = $(subst /,\,$1)
+else
+    # --- Configuração Linux ---
+    EXT = 
+    # Flags do GTK para Linux
+    GUI_FLAGS = `pkg-config --cflags --libs gtk+-3.0`
+    RM = rm -f
+    FIX_PATH = $1
+endif
 
-# --- ARQUIVOS FONTE E OBJETO (TESTES E UNITY) ---
-UNITY_OBJECT = $(UNITYDIR)/unity.o
-TEST_RUNNER_SRC = $(TESTDIR)/test_runner.c
-TEST_RUNNER_OBJ = $(TEST_RUNNER_SRC:.c=.o)
-TEST_CASE_SOURCES = $(filter-out $(TEST_RUNNER_SRC), $(wildcard $(TESTDIR)/*.c))
+FULL_TARGET = $(TARGET_GUI)$(EXT)
 
-# --- REGRAS DE COMPILAÇÃO ---
+all: gui
 
-# Regra padrão: compila o programa principal (em modo debug)
-all: $(TARGET)
+# Compilação da Interface Gráfica
+gui: $(COMMON_OBJECTS) $(SRCDIR)/gui_main.o
+	@echo "--- Compilando GUI para $(if $(filter .exe,$(EXT)),Windows,Linux) ---"
+	$(CC) $(BASE_CFLAGS) $(COMMON_OBJECTS) $(SRCDIR)/gui_main.o -o $(FULL_TARGET) $(GUI_FLAGS)
 
-# Target para compilar em modo DEBUG (com -g)
-# Este é o padrão, mas é bom ter um target explícito
-debug: $(TARGET)
+# Compilação de Objetos genéricos
+$(SRCDIR)/%.o: $(SRCDIR)/%.c
+	$(CC) $(BASE_CFLAGS) $(if $(filter $(SRCDIR)/gui_main.o,$@),$(if $(filter .exe,$(EXT)),,`pkg-config --cflags gtk+-3.0`)) -c $< -o $@
 
-# Target para compilar em modo RELEASE (com -O2)
-# Ele define a variável CFLAGS apenas para esta execução
-release: CFLAGS = $(BASE_CFLAGS) $(RELEASE_CFLAGS)
-release: all
-
-# Regra para compilar o executável principal
-$(TARGET): $(OBJECTS)
-	@echo "--- Linkando $(TARGET) com flags: $(CFLAGS) ---"
-	$(CC) $(CFLAGS) $(OBJECTS) -o $(TARGET)
-
-# Regra para compilar o executável de testes
-$(TEST_TARGET): $(APP_OBJECTS_NO_MAIN) $(TEST_RUNNER_OBJ) $(UNITY_OBJECT)
-	@echo "--- Linkando $(TEST_TARGET) com flags: $(CFLAGS) ---"
-	$(CC) $(CFLAGS) $(APP_OBJECTS_NO_MAIN) $(TEST_RUNNER_OBJ) $(UNITY_OBJECT) -o $(TEST_TARGET)
-
-# Regra para compilar arquivos .c da aplicação em .o
-$(SRCDIR)/%.o: $(SRCDIR)/%.c $(wildcard $(INCDIR)/*.h)
-	@echo "Compilando (app) $<..."
-	$(CC) $(CFLAGS) -c $< -o $@
-
-# Regra para compilar o test_runner.c em .o
-$(TEST_RUNNER_OBJ): $(TEST_RUNNER_SRC) $(TEST_CASE_SOURCES) $(wildcard $(INCDIR)/*.h)
-	@echo "Compilando (test runner) $<..."
-	$(CC) $(CFLAGS) -c $(TEST_RUNNER_SRC) -o $(TEST_RUNNER_OBJ)
-
-# Regra para compilar o unity.c em .o
-$(UNITY_OBJECT): $(UNITYDIR)/unity.c
-	@echo "Compilando (unity) $<..."
-	$(CC) $(CFLAGS) -c $< -o $@
-
-# --- REGRAS DE EXECUÇÃO E LIMPEZA ---
-
-# Compila (em modo debug, por padrão) e executa os testes
-test: $(TEST_TARGET)
-	./$(TEST_TARGET)
-
-# Limpar arquivos compilados
 clean:
-	@echo "Limpando arquivos compilados..."
-	rm -f $(SRCDIR)/*.o $(TARGET) res.txt
-	rm -f $(TESTDIR)/*.o $(UNITYDIR)/*.o $(TEST_TARGET)
+	$(RM) $(call FIX_PATH,$(SRCDIR)/*.o) $(call FIX_PATH,*.exe) $(call FIX_PATH,*.obj) $(call FIX_PATH,temp_gui.txt) $(call FIX_PATH,$(FULL_TARGET))
 
-# Executar o programa principal (compila em debug por padrão)
-run: $(TARGET)
-	./$(TARGET) -v
-
-# Recompilar tudo (em modo debug)
-rebuild: clean all
-
-# Declara alvos que não são arquivos
-.PHONY: all clean run rebuild test debug release
+.PHONY: all gui clean
