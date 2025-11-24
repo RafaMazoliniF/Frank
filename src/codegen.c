@@ -1,12 +1,29 @@
+/**
+ * @file codegen.c
+ * @brief Implementação das funções de Geração de Código.
+ * * Este módulo é responsável por gerar as instruções da Máquina Virtual (MVD)
+ * e gerenciar contadores de rótulos e endereços de memória.
+ */
 #include "codegen.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+/** Contador global para geração de rótulos (labels) sequenciais. */
 int label = 0;
-int addr = 1; // Keeps 0 to function return values
+/** Contador de endereço de memória para alocação de variáveis. O endereço 0 é reservado para retorno de função. */
+int addr = 1;
+/** Ponteiro para o arquivo de saída onde o código objeto (.obj) é escrito. */
 FILE * gen_file = NULL;
 
+/**
+ * @brief Converte um valor inteiro para sua representação em string, formatada para o código objeto.
+ * * Rótulos (labels) recebem um espaçamento extra. Valores negativos ou -1 (para parâmetros não utilizados)
+ * são representados por espaços.
+ * * @param string Ponteiro para a string de saída (deve ser alocada).
+ * @param val O valor inteiro a ser convertido.
+ * @param is_label Flag indicando se o valor é um rótulo.
+ */
 void int_to_string(char ** string, int val, bool is_label) {
     if (val >= 0) {
         if (is_label) {
@@ -19,6 +36,15 @@ void int_to_string(char ** string, int val, bool is_label) {
     }
 }
 
+/**
+ * @brief Gera uma linha de instrução da Máquina Virtual (MVD) e escreve no arquivo de saída.
+ * * A instrução é formatada com rótulo (opcional), mnemônico e até dois parâmetros.
+ * O arquivo de saída "result.obj" é aberto e fechado em cada chamada (modo 'a').
+ * * @param label Rótulo da instrução (-1 se não houver).
+ * @param mnemonic O mnemônico da instrução (ex: "LDC", "ADD", "JMP").
+ * @param param1 Primeiro parâmetro (-1 se não houver).
+ * @param param2 Segundo parâmetro (-1 se não houver).
+ */
 void generate(int label, const char * mnemonic, int param1, int param2) {
     gen_file = fopen("result.obj", "a");
     if (gen_file == NULL) {

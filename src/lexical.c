@@ -1,9 +1,22 @@
+/**
+ * @file lexical.c
+ * @brief Implementação do Analisador Léxico.
+ * * Responsável pela leitura do arquivo fonte, identificação e categorização de tokens,
+ * e tratamento de caracteres como espaços, quebras de linha e comentários.
+ */
 #include "lexical.h"
 
+/** Ponteiro global para o arquivo fonte a ser analisado. */
 FILE *file = NULL;
+/** Estrutura que armazena o token atualmente reconhecido. */
 Token current_token = {0};
+/** Contador da linha atual no arquivo fonte para relatórios de erro. */
 int current_line = 1;
 
+/**
+ * @brief Abre o arquivo fonte especificado para leitura.
+ * @param filename O caminho do arquivo a ser aberto.
+ */
 void getFile(char *filename) {
     file = fopen(filename, "r");  
 
@@ -12,6 +25,11 @@ void getFile(char *filename) {
     }
 }
 
+/**
+ * @brief Verifica se uma palavra é um identificador válido (começa com letra ou '_', contém alfanuméricos ou '_').
+ * * @param word String a ser validada.
+ * @return bool Retorna true se a palavra for um identificador válido, false caso contrário.
+ */
 bool isWordValid(const char *word) {
     if (word == NULL || !isalpha(word[0])) {
         return false;
@@ -27,18 +45,18 @@ bool isWordValid(const char *word) {
 }
 
 /**
- * @brief Identifica o símbolo correspondente a uma palavra ou token.
- * 
- * Compara a string com as palavras reservadas para determinar o tipo de token correspondente.
- * 
- * @param word String contendo a palavra/token a ser analisada
- * @return int Valor inteiro correspondente ao enum Simbolo, ou -1 se houver erro
+ * @brief Identifica o símbolo (Simbolo) correspondente a uma palavra ou token.
+ * * Compara a string com as palavras reservadas. Caso não seja palavra reservada,
+ * classifica como número ou identificador.
+ * * @param word String contendo a palavra/token a ser analisada.
+ * @return int Valor inteiro correspondente ao enum Simbolo, ou -1 se houver erro.
  */
 int get_symbol(char * word){
     if (word == NULL) {
         return -1;
     }
 
+    // Identificação de Palavras Reservadas
     if (strcmp(word, "programa") == 0) return SPROGRAMA;
     if (strcmp(word, "inicio") == 0) return SINICIO;
     if (strcmp(word, "fim") == 0) return SFIM;
@@ -56,6 +74,8 @@ int get_symbol(char * word){
     if (strcmp(word, "booleano") == 0) return SBOOLEANO;
     if (strcmp(word, "verdadeiro") == 0) return SVERDADEIRO;
     if (strcmp(word, "falso") == 0) return SFALSO;
+    
+    // Identificação de Operadores e Símbolos
     if (strcmp(word, ":=") == 0) return SATRIBUICAO;
     if (strcmp(word, ">=") == 0) return SMAIORIG;
     if (strcmp(word, "<=") == 0) return SMENORIG;
@@ -77,26 +97,26 @@ int get_symbol(char * word){
     if (strcmp(word, "ou") == 0) return SOU;
     if (strcmp(word, "nao") == 0) return SNAO;
 
+    // Identificação de Números e Identificadores (não palavras reservadas)
     if (isdigit(word[0])) {
+        // Verifica se é puramente numérico
         for (int i = 1; i < (int)strlen(word); i++) {
             if (!isdigit(word[i])) {
-                return SIDENTIFICADOR;
+                return SIDENTIFICADOR; // Contém caracteres não numéricos
             }
         }
-    } else {
-        return SIDENTIFICADOR;
+        return SNUMERO;
     }
-
-    return SNUMERO;
+    
+    // Se não é palavra reservada nem começa com dígito, é um identificador.
+    return SIDENTIFICADOR;
 }
 
 
-
 /**
- * @brief captura o próximo caracter de um dado arquivo
- * 
- * @param file arquivo com permissão de leitura
- * @return ponteiro para o caracter, NULL se houve falha
+ * @brief Captura o próximo caracter do arquivo, tratando a contagem de linhas e caracteres de controle.
+ * * Ignora o caractere de Retorno de Carro ('\r') e incrementa a contagem de linhas em '\n'.
+ * * @return char O próximo caractere lido ou '\0' se for o fim do arquivo (EOF).
  */
 char get_next_char() {
     int c;
@@ -114,12 +134,11 @@ char get_next_char() {
 }
 
 /**
- * @brief Expande o buffer se necessário
- * 
- * @param buffer ponteiro para o buffer atual
- * @param capacity ponteiro para a capacidade atual
- * @param length comprimento atual do buffer
- * @return char* ponteiro para o buffer expandido
+ * @brief Expande o buffer de caracteres se a capacidade atual for insuficiente.
+ * * @param buffer Ponteiro para o buffer atual.
+ * @param capacity Ponteiro para a capacidade atual do buffer.
+ * @param length Comprimento atual dos dados no buffer.
+ * @return char* Ponteiro para o buffer (potencialmente realocado e expandido).
  */
 char* ensure_buffer_capacity(char* buffer, int* capacity, int length) {
     if (length + 1 >= *capacity) {
@@ -133,12 +152,12 @@ char* ensure_buffer_capacity(char* buffer, int* capacity, int length) {
 }
 
 /**
- * @brief captura a próxima palavra de um dado arquivo
- * 
- * captura a próxima palavra de um dado arquivo ignorando comentários, espaços ou caracteres não alfanuméricos
- * 
- * @param file arquivo com permissão de leitura
- * @return ponteiro para o caracter, NULL se houve falha
+ * @brief Captura a próxima "palavra" ou token do arquivo, agrupando caracteres.
+ * * Ignora espaços em branco e agrupa:
+ * - Sequências de caracteres alfanuméricos ou '_' (identificadores/palavras reservadas).
+ * - Sequências de dígitos (números).
+ * - Operadores compostos (:=, >=, <=, !=) ou símbolos simples.
+ * * @return char* A string (lexema) da próxima palavra ou token alocada dinamicamente, ou NULL se for ENDFILE.
  */
 char * get_next_word() {
     int capacity = 16;     
@@ -158,7 +177,7 @@ char * get_next_word() {
         return NULL;
     }
 
-    // Identifica palavras e identificadores
+    // Identifica palavras e identificadores (começam com letra ou '_')
     if (isalpha(ch) || ch == '_') {
         do {
             buffer = ensure_buffer_capacity(buffer, &capacity, length);
@@ -168,7 +187,7 @@ char * get_next_word() {
 
         if (ch != '\0') ungetc(ch, file);
     }
-    // Identifica números
+    // Identifica números (começam com dígito)
     else if (isdigit(ch)) {
         do {
             buffer = ensure_buffer_capacity(buffer, &capacity, length);
@@ -179,12 +198,14 @@ char * get_next_word() {
         if (ch != '\0') ungetc(ch, file);
     }
 
+    // Identifica operadores e símbolos
     else {
         buffer = ensure_buffer_capacity(buffer, &capacity, length);
         buffer[length++] = ch;
     
         char next_ch = get_next_char();
         if (next_ch != '\0') {
+            // Verifica operadores compostos
             if ((ch == ':' && next_ch == '=') ||  // :=
                 (ch == '>' && next_ch == '=') ||  // >=
                 (ch == '<' && next_ch == '=') ||  // <=
@@ -202,6 +223,11 @@ char * get_next_word() {
     return buffer;
 }
 
+/**
+ * @brief Processa e ignora o conteúdo de um comentário (delimitado por '{' e '}').
+ * * Continua lendo palavras até encontrar o delimitador de fechamento '}'.
+ * Em caso de fim de arquivo antes do fechamento, um erro é impresso.
+ */
 void handle_comment() {
     char * next_word;
     do {
@@ -220,6 +246,11 @@ void handle_comment() {
     } while (next_word != NULL);
 }
 
+/**
+ * @brief Obtém e armazena o próximo token válido na variável global `current_token`.
+ * * Chama `get_next_word` para obter o lexema e `get_symbol` para classificar o token.
+ * Trata o caractere de abertura de comentário '{' recursivamente.
+ */
 void get_next_token() {
     Token token;
 
@@ -232,6 +263,7 @@ void get_next_token() {
         return;
     }
 
+    // Se for o início de um comentário, trata o comentário e obtém o próximo token.
     if (strcmp(word, "{") == 0) {
         free(word);
         handle_comment();
