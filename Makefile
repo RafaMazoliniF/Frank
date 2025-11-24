@@ -7,9 +7,8 @@ BASE_CFLAGS = -Wall -Wextra -std=c99 -Iinclude -Iunity
 SRCDIR = src
 INCDIR = include
 # Pega todos os .c, exceto o main.c original (que é CLI) e o gui_main.c (que tratamos separado)
+# O gui_utils.c já é capturado pelo wildcard, então não precisa ser adicionado manualmente depois.
 COMMON_SOURCES = $(filter-out $(SRCDIR)/main.c $(SRCDIR)/gui_main.c, $(wildcard $(SRCDIR)/*.c))
-# Adiciona o utilitário de GUI
-COMMON_SOURCES += $(SRCDIR)/gui_utils.c
 COMMON_OBJECTS = $(COMMON_SOURCES:.c=.o)
 
 TARGET_GUI = frank_ide
