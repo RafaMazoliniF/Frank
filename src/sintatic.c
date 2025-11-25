@@ -613,11 +613,11 @@ DataType handle_simple_expression() {
     bool neg = false;
 
     if (current_token.symbol == SMAIS || current_token.symbol == SMENOS) {
-        get_next_token();
-        ref = TYPE_INT; // Unários definem tipo inteiro
         if (current_token.symbol == SMENOS) {
             neg = true;
         }
+        get_next_token();
+        ref = TYPE_INT; // Unários definem tipo inteiro
     }
 
     DataType type = handle_term(); 
