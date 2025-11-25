@@ -722,7 +722,7 @@ DataType handle_term() {
                 generate(-1, "MULT ", -1, -1);
                 break;
             case SDIV:
-                generate(-1, "DIV  ", -1, -1);
+                generate(-1, "DIVI ", -1, -1);
                 break;
             case SE:
                 generate(-1, "AND  ", -1, -1);
