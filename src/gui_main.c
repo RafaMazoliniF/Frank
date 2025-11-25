@@ -44,13 +44,21 @@ char* read_result_file() {
 #define IDC_LBL_OUT 107
 
 HWND hEditIn, hEditOut;
-HFONT hFont; // Fonte moderna global
+HFONT hGuiFont;  // Fonte para Interface (Segoe UI)
+HFONT hCodeFont; // Fonte para Código (Consolas/Mono)
 
-// Função para criar fonte Segoe UI (Padrão moderno)
-HFONT CreateModernFont() {
+// Fonte para Interface (Labels, Botões)
+HFONT CreateGuiFont() {
     return CreateFont(-14, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, 
                       DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, 
                       CLEARTYPE_QUALITY, VARIABLE_PITCH, "Segoe UI");
+}
+
+// Fonte Monoespaçada para Código (Consolas)
+HFONT CreateCodeFont() {
+    return CreateFont(-15, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, 
+                      DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, 
+                      CLEARTYPE_QUALITY, FIXED_PITCH | FF_MODERN, "Consolas");
 }
 
 void DoOpenFile(HWND hwnd) {
@@ -117,47 +125,50 @@ void DoSaveFile(HWND hwnd) {
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     switch (uMsg) {
         case WM_CREATE:
-            hFont = CreateModernFont();
+            hGuiFont = CreateGuiFont();
+            hCodeFont = CreateCodeFont();
 
             // Label Entrada
             CreateWindow("STATIC", "Código Fonte (Entrada):", 
                 WS_VISIBLE | WS_CHILD, 
                 20, 10, 400, 20, hwnd, (HMENU)IDC_LBL_IN, GetModuleHandle(NULL), NULL);
-            SendMessage(GetDlgItem(hwnd, IDC_LBL_IN), WM_SETFONT, (WPARAM)hFont, TRUE);
+            SendMessage(GetDlgItem(hwnd, IDC_LBL_IN), WM_SETFONT, (WPARAM)hGuiFont, TRUE);
 
             // Editor Entrada
+            // ADICIONADO: WS_HSCROLL | ES_AUTOHSCROLL para rolagem horizontal e desativar wrap
             hEditIn = CreateWindowEx(WS_EX_CLIENTEDGE, "EDIT", "", 
-                WS_CHILD | WS_VISIBLE | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL | WS_BORDER, 
+                WS_CHILD | WS_VISIBLE | WS_VSCROLL | WS_HSCROLL | ES_MULTILINE | ES_AUTOVSCROLL | ES_AUTOHSCROLL | WS_BORDER, 
                 20, 35, 420, 400, hwnd, (HMENU)IDC_MAIN_EDIT, GetModuleHandle(NULL), NULL);
-            SendMessage(hEditIn, WM_SETFONT, (WPARAM)hFont, TRUE);
+            SendMessage(hEditIn, WM_SETFONT, (WPARAM)hCodeFont, TRUE); // Usa fonte monoespaçada
 
             // Botões Centrais
             HWND btnOpen = CreateWindow("BUTTON", "Abrir Arquivo", 
                 WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON, 
                 460, 150, 120, 35, hwnd, (HMENU)IDC_BTN_OPEN, GetModuleHandle(NULL), NULL);
-            SendMessage(btnOpen, WM_SETFONT, (WPARAM)hFont, TRUE);
+            SendMessage(btnOpen, WM_SETFONT, (WPARAM)hGuiFont, TRUE);
 
             HWND btnComp = CreateWindow("BUTTON", ">> COMPILAR >>", 
                 WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON, 
                 460, 200, 120, 50, hwnd, (HMENU)IDC_BTN_COMPILE, GetModuleHandle(NULL), NULL);
-            SendMessage(btnComp, WM_SETFONT, (WPARAM)hFont, TRUE);
+            SendMessage(btnComp, WM_SETFONT, (WPARAM)hGuiFont, TRUE);
 
             HWND btnSave = CreateWindow("BUTTON", "Salvar Saída", 
                 WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON, 
                 460, 270, 120, 35, hwnd, (HMENU)IDC_BTN_SAVE, GetModuleHandle(NULL), NULL);
-            SendMessage(btnSave, WM_SETFONT, (WPARAM)hFont, TRUE);
+            SendMessage(btnSave, WM_SETFONT, (WPARAM)hGuiFont, TRUE);
 
             // Label Saída
             CreateWindow("STATIC", "Código Objeto (MVD):", 
                 WS_VISIBLE | WS_CHILD, 
                 600, 10, 400, 20, hwnd, (HMENU)IDC_LBL_OUT, GetModuleHandle(NULL), NULL);
-            SendMessage(GetDlgItem(hwnd, IDC_LBL_OUT), WM_SETFONT, (WPARAM)hFont, TRUE);
+            SendMessage(GetDlgItem(hwnd, IDC_LBL_OUT), WM_SETFONT, (WPARAM)hGuiFont, TRUE);
 
             // Editor Saída
+            // ADICIONADO: WS_HSCROLL | ES_AUTOHSCROLL
             hEditOut = CreateWindowEx(WS_EX_CLIENTEDGE, "EDIT", "Aguardando compilação...", 
-                WS_CHILD | WS_VISIBLE | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL | ES_READONLY | WS_BORDER, 
+                WS_CHILD | WS_VISIBLE | WS_VSCROLL | WS_HSCROLL | ES_MULTILINE | ES_AUTOVSCROLL | ES_AUTOHSCROLL | ES_READONLY | WS_BORDER, 
                 600, 35, 360, 400, hwnd, (HMENU)IDC_OUT_EDIT, GetModuleHandle(NULL), NULL);
-            SendMessage(hEditOut, WM_SETFONT, (WPARAM)hFont, TRUE);
+            SendMessage(hEditOut, WM_SETFONT, (WPARAM)hCodeFont, TRUE); // Usa fonte monoespaçada
             break;
 
         case WM_COMMAND:
@@ -195,11 +206,12 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
                 } break;
             }
             break;
-        case WM_CTLCOLORSTATIC: // Fundo transparente para labels
+        case WM_CTLCOLORSTATIC: 
             SetBkMode((HDC)wParam, TRANSPARENT);
             return (LRESULT)GetStockObject(NULL_BRUSH);
         case WM_DESTROY: 
-            DeleteObject(hFont);
+            DeleteObject(hGuiFont);
+            DeleteObject(hCodeFont);
             PostQuitMessage(0); 
             return 0;
     }
@@ -212,18 +224,17 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrev, LPSTR lpCmdLine, int nC
     wc.lpfnWndProc = WindowProc;
     wc.hInstance = hInstance;
     wc.lpszClassName = CLASS_NAME;
-    wc.hbrBackground = (HBRUSH)(COLOR_WINDOW); // Cor padrão de janela mais clara
+    wc.hbrBackground = (HBRUSH)(COLOR_WINDOW); 
     wc.hCursor = LoadCursor(NULL, IDC_ARROW);
     RegisterClass(&wc);
     
-    // Janela Centralizada
     int width = 1000;
     int height = 500;
     int x = (GetSystemMetrics(SM_CXSCREEN) - width) / 2;
     int y = (GetSystemMetrics(SM_CYSCREEN) - height) / 2;
 
     HWND hwnd = CreateWindowEx(0, CLASS_NAME, "Frank IDE - Compilador Didático", 
-        WS_OVERLAPPEDWINDOW & ~WS_THICKFRAME, // Janela fixa para não quebrar layout absoluto
+        WS_OVERLAPPEDWINDOW & ~WS_THICKFRAME, 
         x, y, width, height, NULL, NULL, hInstance, NULL);
         
     if (!hwnd) return 0;
@@ -332,13 +343,13 @@ int main(int argc, char *argv[]) {
     window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
     gtk_window_set_title(GTK_WINDOW(window), "Frank IDE (Linux Edition)");
     gtk_window_set_default_size(GTK_WINDOW(window), 900, 600);
-    gtk_container_set_border_width(GTK_CONTAINER(window), 10); // Margem externa
+    gtk_container_set_border_width(GTK_CONTAINER(window), 10); 
     g_signal_connect(window, "destroy", G_CALLBACK(gtk_main_quit), NULL);
 
-    GtkWidget *vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 10); // Espaçamento vertical de 10px
+    GtkWidget *vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 10); 
     gtk_container_add(GTK_CONTAINER(window), vbox);
 
-    // --- Toolbar com Botões (Ícones) ---
+    // --- Toolbar ---
     GtkWidget *toolbar = gtk_button_box_new(GTK_ORIENTATION_HORIZONTAL);
     gtk_button_box_set_layout(GTK_BUTTON_BOX(toolbar), GTK_BUTTONBOX_START);
     gtk_box_set_spacing(GTK_BOX(toolbar), 5);
@@ -363,11 +374,11 @@ int main(int argc, char *argv[]) {
     g_signal_connect(btn_compile, "clicked", G_CALLBACK(on_compile_clicked), NULL);
     gtk_container_add(GTK_CONTAINER(toolbar), btn_compile);
 
-    // --- Painel Principal Dividido (Paned) ---
+    // --- Painel Dividido ---
     GtkWidget *paned = gtk_paned_new(GTK_ORIENTATION_HORIZONTAL);
     gtk_box_pack_start(GTK_BOX(vbox), paned, TRUE, TRUE, 0);
 
-    // Lado Esquerdo (Entrada)
+    // Esquerda (Entrada)
     GtkWidget *frame_in = gtk_frame_new(NULL);
     GtkWidget *lbl_in = gtk_label_new("<b>Código Fonte</b>");
     gtk_label_set_use_markup(GTK_LABEL(lbl_in), TRUE);
@@ -375,14 +386,19 @@ int main(int argc, char *argv[]) {
     
     GtkWidget *scroll_in = gtk_scrolled_window_new(NULL, NULL);
     gtk_scrolled_window_set_shadow_type(GTK_SCROLLED_WINDOW(scroll_in), GTK_SHADOW_ETCHED_IN);
+    
     text_view_in = gtk_text_view_new();
-    gtk_text_view_set_left_margin(GTK_TEXT_VIEW(text_view_in), 5); // Margem interna texto
+    gtk_text_view_set_left_margin(GTK_TEXT_VIEW(text_view_in), 5);
+    // ADICIONADO: Configuração de fonte monoespaçada e desativação de wrap
+    gtk_text_view_set_monospace(GTK_TEXT_VIEW(text_view_in), TRUE);
+    gtk_text_view_set_wrap_mode(GTK_TEXT_VIEW(text_view_in), GTK_WRAP_NONE);
+
     gtk_container_add(GTK_CONTAINER(scroll_in), text_view_in);
     gtk_container_add(GTK_CONTAINER(frame_in), scroll_in);
     
     gtk_paned_pack1(GTK_PANED(paned), frame_in, TRUE, FALSE);
 
-    // Lado Direito (Saída)
+    // Direita (Saída)
     GtkWidget *frame_out = gtk_frame_new(NULL);
     GtkWidget *lbl_out = gtk_label_new("<b>Código Objeto (MVD)</b>");
     gtk_label_set_use_markup(GTK_LABEL(lbl_out), TRUE);
@@ -390,11 +406,15 @@ int main(int argc, char *argv[]) {
 
     GtkWidget *scroll_out = gtk_scrolled_window_new(NULL, NULL);
     gtk_scrolled_window_set_shadow_type(GTK_SCROLLED_WINDOW(scroll_out), GTK_SHADOW_ETCHED_IN);
+    
     text_view_out = gtk_text_view_new();
     gtk_text_view_set_editable(GTK_TEXT_VIEW(text_view_out), FALSE);
     gtk_text_view_set_left_margin(GTK_TEXT_VIEW(text_view_out), 5);
+    // ADICIONADO: Configuração de fonte monoespaçada e desativação de wrap
+    gtk_text_view_set_monospace(GTK_TEXT_VIEW(text_view_out), TRUE);
+    gtk_text_view_set_wrap_mode(GTK_TEXT_VIEW(text_view_out), GTK_WRAP_NONE);
     
-    // Estilo levemente cinza para saída
+    // CSS para cor de fundo
     GtkCssProvider *provider = gtk_css_provider_new();
     gtk_css_provider_load_from_data(provider, "textview { background-color: #f0f0f0; }", -1, NULL);
     GtkStyleContext *context = gtk_widget_get_style_context(text_view_out);
@@ -404,7 +424,7 @@ int main(int argc, char *argv[]) {
     gtk_container_add(GTK_CONTAINER(frame_out), scroll_out);
 
     gtk_paned_pack2(GTK_PANED(paned), frame_out, TRUE, FALSE);
-    gtk_paned_set_position(GTK_PANED(paned), 450); // Posição inicial do divisor
+    gtk_paned_set_position(GTK_PANED(paned), 450); 
 
     gtk_widget_show_all(window);
     gtk_main();
