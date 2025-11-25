@@ -406,8 +406,6 @@ void handle_conditional_command() {
     }
 
     // CodeGen: Salta se expressão for falsa
-    generate(-1, "LDC  ", 1, -1);
-    generate(-1, "CEQ  ", -1, -1);
     generate(-1, "JMPF ", l1, -1);
 
     if (current_token.symbol == SENTAO) {
