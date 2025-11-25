@@ -3,27 +3,28 @@
 CC = gcc
 BASE_CFLAGS = -Wall -Wextra -std=c99 -Iinclude -Iunity
 
-# Diretórios e Arquivos
+# Diretórios
 SRCDIR = src
 INCDIR = include
-# Pega todos os .c, exceto o main.c original (que é CLI) e o gui_main.c (que tratamos separado)
-# O gui_utils.c já é capturado pelo wildcard, então não precisa ser adicionado manualmente depois.
+# Filtra main.c (CLI) e gui_main.c (GUI), pois são compilados separadamente ou explicitamente
 COMMON_SOURCES = $(filter-out $(SRCDIR)/main.c $(SRCDIR)/gui_main.c, $(wildcard $(SRCDIR)/*.c))
 COMMON_OBJECTS = $(COMMON_SOURCES:.c=.o)
 
 TARGET_GUI = frank_ide
 
-# Detecção de SO
+# Detecção de SO e Configurações Específicas
 ifeq ($(OS),Windows_NT)
-    # --- Configuração Windows ---
+    # --- Windows ---
     EXT = .exe
-    GUI_FLAGS = -lgdi32 -mwindows
+    # -lcomdlg32: Necessário para abrir/salvar arquivos
+    # -fexec-charset=cp1252: Corrige acentuação no Windows
+    GUI_FLAGS = -lgdi32 -mwindows -lcomdlg32
+    BASE_CFLAGS += -finput-charset=UTF-8 -fexec-charset=cp1252
     RM = del /Q
     FIX_PATH = $(subst /,\,$1)
 else
-    # --- Configuração Linux ---
+    # --- Linux ---
     EXT = 
-    # Flags do GTK para Linux
     GUI_FLAGS = `pkg-config --cflags --libs gtk+-3.0`
     RM = rm -f
     FIX_PATH = $1
