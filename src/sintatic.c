@@ -610,15 +610,22 @@ DataType handle_expression() {
  */
 DataType handle_simple_expression() {
     DataType ref = UNDEFINED;
+    bool neg = false;
 
     if (current_token.symbol == SMAIS || current_token.symbol == SMENOS) {
         get_next_token();
         ref = TYPE_INT; // Unários definem tipo inteiro
+        if (current_token.symbol == SMENOS) {
+            neg = true;
+        }
     }
 
     DataType type = handle_term(); 
 
     if (type == TYPE_INT) {
+        if (neg) {
+            generate(-1, "NEG  ", -1, -1);
+        }
         ref = TYPE_INT;
     } else {
         if (ref == TYPE_INT) {
