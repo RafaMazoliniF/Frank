@@ -1,18 +1,17 @@
 /**
  * @file sintatic.c
  * @brief Implementação do Analisador Sintático (Parser) com ações Semânticas e Geração de Código.
- * * Este módulo realiza a análise descendente preditiva para verificar a correção sintática
- * do código, executando checagens semânticas e gerando o código de máquina virtual (MVD)
- * em paralelo.
  */
 #include "sintatic.h"
 #include "codegen.h"
 #include "lexical.h"
 #include "semantic.h"
 
+// Protótipo auxiliar para evitar implicit declaration warning
+void print_sintax_error(const char* expected);
+
 /**
  * @brief Imprime uma mensagem de erro sintático no console de erro (stderr) e encerra a execução.
- * * @param expected O lexema esperado para o token atual, ou NULL para um token inesperado genérico.
  */
 void print_sintax_error(const char* expected) {
     fprintf(stderr, "ERRO SINTÁTICO na linha %d: ", current_line);
@@ -79,8 +78,7 @@ void handle_program() {
 }
 
 /**
- * @brief Analisa a estrutura de um bloco: <bloco>::= [<etapa de declaração de variáveis>] [<etapa de declaração de sub-rotinas>] <comandos>
- * * Gerencia a alocação e desalocação de memória para variáveis locais.
+ * @brief Analisa a estrutura de um bloco
  */
 void handle_block() {
     int count = handle_variable_declaration_section();
@@ -111,8 +109,7 @@ void handle_block() {
 }
 
 /**
- * @brief Analisa a seção de declaração de variáveis: <etapa de declaração de variáveis>::= var <declaração de variáveis> ; {<declaração de variáveis>;}
- * * @return int O número total de variáveis declaradas.
+ * @brief Analisa a seção de declaração de variáveis
  */
 int handle_variable_declaration_section(){
     int count = 0;
@@ -140,11 +137,6 @@ int handle_variable_declaration_section(){
     return count;
 }
 
-/**
- * @brief Analisa uma declaração de variáveis: <declaração de variáveis>::= <identificador> {, <identificador>} : <tipo>
- * * Realiza a inserção de cada variável na Tabela de Símbolos.
- * * @param count Ponteiro para o contador de variáveis no escopo atual.
- */
 void handle_variables(int * count) {
     do {
         if (current_token.symbol == SIDENTIFICADOR) {
@@ -174,7 +166,6 @@ void handle_variables(int * count) {
                 fflush(stderr);
                 exit(EXIT_FAILURE);
             }
-            // ===================================
         } else {
             print_sintax_error("identificador");
         }
@@ -187,7 +178,6 @@ void handle_variables(int * count) {
 
 /**
  * @brief Analisa o tipo de dado: <tipo> ::= (inteiro | booleano)
- * * Realiza a ação semântica de atribuição de tipo aos símbolos declarados.
  */
 void handle_type() {
     if (current_token.symbol != SINTEIRO && current_token.symbol != SBOOLEANO) {
@@ -196,17 +186,17 @@ void handle_type() {
         exit(EXIT_FAILURE);
     }
     else {
-        // Ação Semântica: Atribui o tipo (INT ou BOOL) aos nós pendentes.
+        // Ação Semântica: Atribui o tipo (TYPE_INT ou TYPE_BOOL) aos nós pendentes.
         if (current_token.symbol == SINTEIRO)
-            insert_type(INT);
+            insert_type(TYPE_INT);
         else 
-            insert_type(BOOL);
+            insert_type(TYPE_BOOL);
     }
     get_next_token();
 }
 
 /**
- * @brief Analisa o bloco de comandos: <comandos>::= inicio <comando>{;<comando>}[;] fim
+ * @brief Analisa o bloco de comandos
  */
 void handle_commands() {
     if (current_token.symbol == SINICIO) {
@@ -221,7 +211,6 @@ void handle_commands() {
                     handle_command();
                 }
             } else {
-                // Erro: token não é 'fim' nem ';', indicando falta de separador.
                 print_sintax_error(";");
             }
         }
@@ -234,53 +223,47 @@ void handle_commands() {
 }
 
 /**
- * @brief Analisa um comando genérico, identificando-o pelo primeiro token.
+ * @brief Analisa um comando genérico
  */
 void handle_command() {
     switch (current_token.symbol) {
         case SIDENTIFICADOR:
-            handle_assignment_chprocedure(); // Pode ser atribuição ou chamada de procedimento.
+            handle_assignment_chprocedure(); 
             break;
         case SSE:
-            handle_conditional_command(); // Comando 'se'.
+            handle_conditional_command(); 
             break;
         case SENQUANTO:
-            handle_while_command(); // Comando 'enquanto'.
+            handle_while_command(); 
             break;
         case SLEIA:
-            handle_read_command(); // Comando 'leia'.
+            handle_read_command(); 
             break;
         case SESCREVA:
-            handle_write_command(); // Comando 'escreva'.
+            handle_write_command(); 
             break;
         case SINICIO:
-            handle_commands(); // Bloco de comandos aninhado.
+            handle_commands(); 
             break;
         default:
-            // Erro: token não inicia um comando válido.
             print_sintax_error(NULL);
             break;
     }
 }
 
-/**
- * @brief Distingue entre comando de atribuição e chamada de procedimento após a leitura do identificador.
- * * <atribuição_chprocedimento>::= (<comando atribuicao>| <chamada de procedimento>)
- */
 void handle_assignment_chprocedure() {
     Token aux = current_token;
     get_next_token();
     if (current_token.symbol == SATRIBUICAO) {
-        handle_assignment_command(aux); // É uma atribuição.
+        handle_assignment_command(aux); 
     }
     else {
-        handle_procedure_call(aux); // É uma chamada de procedimento.
+        handle_procedure_call(aux); 
     }
 }
 
 /**
  * @brief Analisa o comando de leitura: <comando leitura>::= leia ( <identificador> )
- * * Realiza a checagem semântica se o identificador é uma variável do tipo INT.
  */
 void handle_read_command() {
     get_next_token();
@@ -291,7 +274,7 @@ void handle_read_command() {
             
             if (node != NULL) {
                 // Checagem Semântica: Verifica se é uma variável inteira
-                if (node->data_type == INT) {
+                if (node->data_type == TYPE_INT) {
 
                     // Geração de Código: Leitura e armazenamento do valor.
                     generate(-1, "RD   ", -1, -1);
@@ -305,14 +288,12 @@ void handle_read_command() {
                     }
                 }
                 else {
-                    // Erro Semântico: Não é uma variável inteira.
                     fprintf(stderr, "ERRO SEMANTICO na linha %d: símbolo %s não é uma variável inteira\n", current_line, current_token.lexem);
                     fflush(stderr);
                     exit(EXIT_FAILURE);
                 }
             }
             else {
-                // Erro Semântico: Símbolo não declarado.
                 fprintf(stderr, "ERRO SEMANTICO na linha %d: símbolo %s não existe\n", current_line, current_token.lexem);
                 fflush(stderr);
                 exit(EXIT_FAILURE);
@@ -328,8 +309,7 @@ void handle_read_command() {
 }
 
 /**
- * @brief Analisa o comando de escrita: <comando escrita>::= escreva ( <identificador> )
- * * Realiza a checagem semântica se o identificador é uma variável do tipo INT.
+ * @brief Analisa o comando de escrita
  */
 void handle_write_command() {
     get_next_token();
@@ -341,7 +321,7 @@ void handle_write_command() {
             
             if (node != NULL) {
                 // Checagem Semântica: Verifica se é uma variável inteira e não um marcador de escopo.
-                if (node->data_type == INT && node->scope == false) {
+                if (node->data_type == TYPE_INT && node->scope == false) {
 
                     // Geração de Código: Carrega o valor e imprime.
                     generate(-1, "LDV  ", node->mem, -1);
@@ -355,14 +335,12 @@ void handle_write_command() {
                     }
                 }
                 else {
-                    // Erro Semântico: Não é uma variável inteira ou é um símbolo de escopo.
                     fprintf(stderr, "ERRO SEMANTICO na linha %d: símbolo %s não é uma variável inteira\n", current_line, current_token.lexem);
                     fflush(stderr);
                     exit(EXIT_FAILURE);
                 }
             }
             else {
-                // Erro Semântico: Símbolo não declarado.
                 fprintf(stderr, "ERRO SEMANTICO na linha %d: símbolo %s não existe\n", current_line, current_token.lexem);
                 fflush(stderr);
                 exit(EXIT_FAILURE);
@@ -378,8 +356,7 @@ void handle_write_command() {
 }
 
 /**
- * @brief Analisa o comando de repetição 'enquanto': <comando enquanto>::= enquanto <expressão> faca <comando>
- * * Realiza a checagem semântica para garantir que a expressão é do tipo BOOL.
+ * @brief Analisa o comando de repetição 'enquanto'
  */
 void handle_while_command() {
     int l1 = label++; // Rótulo para o início do loop (expressão)
@@ -390,7 +367,7 @@ void handle_while_command() {
 
     get_next_token();
     // Checagem Semântica: A expressão deve ser booleana.
-    if (handle_expression() != BOOL) { 
+    if (handle_expression() != TYPE_BOOL) { 
         fprintf(stderr, "ERRO SEMANTICO na linha %d: expressão deve ser BOOL\n", current_line);
         fflush(stderr);
         exit(EXIT_FAILURE);
@@ -414,15 +391,14 @@ void handle_while_command() {
 }
 
 /**
- * @brief Analisa o comando condicional 'se': <comando condicional>::= se <expressão> entao <comando> [senao <comando>]
- * * Realiza a checagem semântica para garantir que a expressão é do tipo BOOL.
+ * @brief Analisa o comando condicional 'se'
  */
 void handle_conditional_command() {
     int l1 = label++; // Rótulo para o bloco 'senao' ou final
 
     get_next_token();
     // Checagem Semântica: A expressão deve ser booleana.
-    if (handle_expression() != BOOL) {
+    if (handle_expression() != TYPE_BOOL) {
         fprintf(stderr, "ERRO SEMANTICO na linha %d: expressão deve ser BOOL\n", current_line);
         fflush(stderr);
         exit(EXIT_FAILURE);
@@ -457,21 +433,17 @@ void handle_conditional_command() {
 }
 
 /**
- * @brief Analisa a seção de declaração de sub-rotinas (procedimentos e funções).
- * * <etapa de declaração de sub-rotinas> ::= (<declaração de procedimento>;| <declaração de função>;) {...}
- * * @return bool Retorna true se pelo menos uma sub-rotina aninhada foi encontrada, false caso contrário.
+ * @brief Analisa a seção de declaração de sub-rotinas
  */
 bool handle_subroutine_section() {
     bool has_inner_subprogram = false;
 
     if (current_token.symbol == SPROCEDIMENTO || current_token.symbol == SFUNCAO) {
-        // Geração de Código: Inserir um salto para pular a definição da sub-rotina ao executar o bloco principal.
         generate(-1, "JMP  ", label, -1);
         label++;
         has_inner_subprogram = true;
     }
 
-    // Loop para lidar com múltiplas declarações de procedimento ou função.
     while (current_token.symbol == SPROCEDIMENTO || current_token.symbol == SFUNCAO) {
         if (current_token.symbol == SPROCEDIMENTO)
             handle_procedure_declaration();
@@ -487,33 +459,28 @@ bool handle_subroutine_section() {
     return has_inner_subprogram;
 }
 
-/**
- * @brief Analisa a declaração de um procedimento: <declaração de procedimento> ::= procedimento <identificador>; <bloco>
- */
 void handle_procedure_declaration() {
-    int l1 = label++; // Rótulo de entrada do procedimento
+    int l1 = label++; 
     SymbolNode * proc;
 
     get_next_token();
 
     if (current_token.symbol == SIDENTIFICADOR) {
-        // Ação Semântica: Verifica unicidade e insere o procedimento.
         if (can_declare_subroutine(current_token.lexem)) {
             insert_node_table(current_token.lexem, true, UNDEFINED, PROCEDURE, -1);
             proc = table;
 
-            generate(l1, "NULL", -1, -1); // Rótulo de entrada
+            generate(l1, "NULL", -1, -1); 
 
             get_next_token();
             if (current_token.symbol == SPONTO_VIRGULA) {
                 get_next_token();
-                handle_block(); // Analisa o corpo do procedimento
+                handle_block(); 
             } else {
                 print_sintax_error(";");
             }
         }
         else {
-            // Erro Semântico: Identificador já existe.
             fprintf(stderr, "ERRO SEMANTICO na linha %d: identificador %s já existe\n", current_line, current_token.lexem);
             fflush(stderr);
             exit(EXIT_FAILURE);
@@ -523,42 +490,36 @@ void handle_procedure_declaration() {
         fflush(stderr);
         exit(EXIT_FAILURE);
     }
-    // Ação Semântica: Remove o escopo da sub-rotina da pilha.
     pop_scope(proc);
-    proc->mem = l1; // Armazena o rótulo de entrada na Tabela de Símbolos
-    generate(-1, "RETURN", -1, -1); // Geração de Código: Retorno de procedimento
+    proc->mem = l1; 
+    generate(-1, "RETURN", -1, -1); 
 }
 
-/**
- * @brief Analisa a declaração de uma função: <declaração de função> ::= funcao <identificador>: <tipo>; <bloco>
- */
 void handle_function_declaration() {
-    int l1 = label++; // Rótulo de entrada da função
+    int l1 = label++; 
     SymbolNode * func;
 
     get_next_token();
     if (current_token.symbol == SIDENTIFICADOR) {
-        // Ação Semântica: Verifica unicidade e insere a função.
         if (can_declare_subroutine(current_token.lexem)) {
             insert_node_table(current_token.lexem, true, UNDEFINED, FUNC, l1);
             func = table;
 
-            generate(l1, "NULL ", -1, -1); // Rótulo de entrada
+            generate(l1, "NULL ", -1, -1); 
             
             get_next_token();
             if (current_token.symbol == SDOISPONTOS) {
                 get_next_token();
                 if (current_token.symbol == SINTEIRO || current_token.symbol == SBOOLEANO) {
-                    // Ação Semântica: Atribui o tipo de retorno da função.
                     if (current_token.symbol == SINTEIRO)
-                        insert_type(INT);
+                        insert_type(TYPE_INT);
                     else
-                        insert_type(BOOL);
+                        insert_type(TYPE_BOOL);
                     
                     get_next_token();
                     if (current_token.symbol == SPONTO_VIRGULA) {
                         get_next_token();
-                        handle_block(); // Analisa o corpo da função
+                        handle_block(); 
                     } else {
                         print_sintax_error(";");
                     }
@@ -572,7 +533,6 @@ void handle_function_declaration() {
             }
         }   
         else {
-            // Erro Semântico: Identificador já existe.
             fprintf(stderr, "ERRO SEMANTICO na linha %d: %s já existe\n", current_line, current_token.lexem);
             fflush(stderr);
             exit(EXIT_FAILURE);
@@ -582,26 +542,20 @@ void handle_function_declaration() {
         fflush(stderr);
         exit(EXIT_FAILURE);
     }
-    // Ação Semântica: Remove o escopo da sub-rotina da pilha.
     pop_scope(func);
-    func->mem = l1; // Armazena o rótulo de entrada na Tabela de Símbolos
-    generate(-1, "RETURN", -1, -1); // Geração de Código: Retorno de função
+    func->mem = l1; 
+    generate(-1, "RETURN", -1, -1); 
 }
 
-/**
- * @brief Função auxiliar para validar que o operador relacional está sendo usado com tipos inteiros.
- * * Consome o token do operador e verifica se a expressão à direita é INT.
- * * @param type1 Ponteiro para o tipo da expressão à esquerda (deve ser INT).
- */
 void process_relational_operator(DataType * type1) {
-    if (*type1 != INT) {
+    if (*type1 != TYPE_INT) {
         fprintf(stderr, "ERRO SEMANTICO na linha %d: operação com tipos incompatíveis1\n", current_line);
         fflush(stderr);
         exit(EXIT_FAILURE);
     }
     get_next_token();
     DataType type2 = handle_simple_expression();
-    if (type2 != INT) {
+    if (type2 != TYPE_INT) {
         fprintf(stderr, "ERRO SEMANTICO na linha %d: operação com tipos incompatíveis2\n", current_line);
         fflush(stderr);
         exit(EXIT_FAILURE);
@@ -609,103 +563,90 @@ void process_relational_operator(DataType * type1) {
 }
 
 /**
- * @brief Analisa uma expressão: <expressão>::= <expressão simples> [<operador relacional><expressão simples>]
- * * @return DataType O tipo de dado resultante da expressão (INT ou BOOL).
+ * @brief Analisa uma expressão
  */
 DataType handle_expression() {
     DataType type1 = handle_simple_expression();
     
-    // Verifica a presença de um operador relacional.
     if (current_token.symbol == SMAIOR) {
         process_relational_operator(&type1);
         generate(-1, "CMA  ", -1, -1);
-        return BOOL;
+        return TYPE_BOOL;
     }
     if (current_token.symbol == SMAIORIG) {
         process_relational_operator(&type1);
         generate(-1, "CMAQ ", -1, -1);
-        return BOOL;
+        return TYPE_BOOL;
     }
     if (current_token.symbol == SIG) {
         process_relational_operator(&type1);
         generate(-1, "CEQ  ", -1, -1);
-        return BOOL;
+        return TYPE_BOOL;
     }
     if (current_token.symbol == SMENOR) {
         process_relational_operator(&type1);
         generate(-1, "CME  ", -1, -1);
-        return BOOL;
+        return TYPE_BOOL;
     }
     if (current_token.symbol == SMENORIG) {
         process_relational_operator(&type1);
         generate(-1, "CMEQ ", -1, -1);
-        return BOOL;
+        return TYPE_BOOL;
     }
     if (current_token.symbol == SDIF) {
         process_relational_operator(&type1);
         generate(-1, "CDIF ", -1, -1);
-        return BOOL;
+        return TYPE_BOOL;
     }
     
-    return type1; // Retorna o tipo da expressão simples (se não houver relacional).
+    return type1; 
 }
 
 /**
- * @brief Analisa uma expressão simples: <expressão simples> ::= [ + | - ] <termo> {( + | - | ou) <termo> }
- * * Implementa a precedência para operadores aditivos (+, -) e OR (ou).
- * Realiza as checagens de compatibilidade de tipos.
- * * @return DataType O tipo de dado resultante (INT para +, -; BOOL para 'ou').
+ * @brief Analisa uma expressão simples
  */
 DataType handle_simple_expression() {
     DataType ref = UNDEFINED;
 
-    // Checa a presença de sinal unário opcional (+ ou -).
     if (current_token.symbol == SMAIS || current_token.symbol == SMENOS) {
         get_next_token();
-        ref = INT; // Sinais unários implicam tipo inteiro.
+        ref = TYPE_INT; // Sinais unários implicam tipo inteiro.
     }
 
-    DataType type = handle_term(); // Analisa o primeiro termo
+    DataType type = handle_term(); 
 
-    // Checagem de tipo para o primeiro termo.
-    if (type == INT) {
-        ref = INT;
+    if (type == TYPE_INT) {
+        ref = TYPE_INT;
     } else {
-        if (ref == INT) {
-            // Erro Semântico: Sinal unário com termo não-inteiro.
+        if (ref == TYPE_INT) {
             fprintf(stderr, "ERRO SEMANTICO na linha %d: operação com tipos incompatíveis3\n", current_line);
             fflush(stderr);
             exit(EXIT_FAILURE);
         } else {
-            ref = BOOL; // Se não tem sinal unário, o tipo é determinado pelo termo (BOOL).
+            ref = TYPE_BOOL; 
         }
     }
 
-    // Armazena os operadores para gerar o código na ordem correta (in-order).
     Simbolo * operations = (Simbolo*)malloc(100 * sizeof(Simbolo));
     int i_op = 0;
 
-    // Loop para operações aditivas/OR.
     while (current_token.symbol == SMAIS || current_token.symbol == SMENOS || current_token.symbol == SOU) {
         operations[i_op] = current_token.symbol;
         i_op++;
 
-        // Checagem Semântica: Operador 'ou' com tipo inteiro é um erro.
-        if (current_token.symbol == SOU && ref == INT) {
+        if (current_token.symbol == SOU && ref == TYPE_INT) {
             fprintf(stderr, "ERRO SEMANTICO na linha %d: operação com tipos incompatíveis4\n", current_line);
             fflush(stderr);
             exit(EXIT_FAILURE);
         }
 
-        // Checagem Semântica: Operadores aditivos (+, -) com tipo booleano é um erro.
-        else if ((current_token.symbol == SMAIS || current_token.symbol == SMENOS) && ref == BOOL) {
+        else if ((current_token.symbol == SMAIS || current_token.symbol == SMENOS) && ref == TYPE_BOOL) {
             fprintf(stderr, "ERRO SEMANTICO na linha %d: operação com tipos incompatíveis5\n", current_line);
             fflush(stderr);
             exit(EXIT_FAILURE);
         }
 
         get_next_token();
-        // Checagem Semântica: O termo subsequente deve ser do mesmo tipo.
         if (handle_term() != ref) {
             fprintf(stderr, "ERRO SEMANTICO na linha %d: operação com tipos incompatíveis6\n", current_line);
             fflush(stderr);
@@ -713,7 +654,6 @@ DataType handle_simple_expression() {
         }
     }
 
-    // Geração de Código: Executa as operações aditivas/OR na ordem.
     for (int i = 0; i < i_op; i++) {
         switch (operations[i]) {
             case SMAIS:
@@ -731,26 +671,21 @@ DataType handle_simple_expression() {
     }
 
     free(operations);
-    return ref; // Retorna o tipo da expressão simples.
+    return ref; 
 }
 
 /**
- * @brief Analisa um termo: <termo>::= <fator> {(* | div | e) <fator>}
- * * Implementa a precedência para operadores multiplicativos (*, div) e AND (e).
- * Realiza as checagens de compatibilidade de tipos.
- * * @return DataType O tipo de dado resultante (INT para *, div; BOOL para 'e').
+ * @brief Analisa um termo
  */
 DataType handle_term() {
     DataType type1 = handle_factor();
     Simbolo s = current_token.symbol;
 
-    // Armazena os operadores para gerar o código na ordem correta (in-order).
     Simbolo * operations = (Simbolo*)malloc(100 * sizeof(Simbolo));
     int i_op = 0;
 
     DataType type_to_return = -1;
 
-    // Loop para operações multiplicativas/AND.
     while(current_token.symbol == SMULT || current_token.symbol == SDIV || current_token.symbol == SE) {
         operations[i_op] = current_token.symbol;
         i_op++;
@@ -758,32 +693,29 @@ DataType handle_term() {
         get_next_token();
         DataType type2 = handle_factor();
         
-        // Checagem Semântica: Multiplicação/Divisão deve ser com tipos INT.
         if (s == SMULT || s == SDIV) {
-            if (type1 != INT || type2 != INT) {
+            if (type1 != TYPE_INT || type2 != TYPE_INT) {
                 fprintf(stderr, "ERRO SEMANTICO na linha %d: operação numérica com booleano\n", current_line);
                 fflush(stderr);
                 exit(EXIT_FAILURE);
             }
             else {
-                type_to_return = INT; // Resultado é INT.
+                type_to_return = TYPE_INT; 
             }
         }
-        // Checagem Semântica: Operador 'e' (AND) deve ser com tipos BOOL.
         else {
-            if (type1 != BOOL || type2 != BOOL) {
+            if (type1 != TYPE_BOOL || type2 != TYPE_BOOL) {
                 fprintf(stderr, "ERRO SEMANTICO na linha %d: operação lógica com inteiro\n", current_line);
                 fflush(stderr);
                 exit(EXIT_FAILURE);
             }
             else {
-                type_to_return = BOOL; // Resultado é BOOL.
+                type_to_return = TYPE_BOOL; 
             }
         }
         s = current_token.symbol;
     }
 
-    // Geração de Código: Executa as operações multiplicativas/AND na ordem.
     for (int i = 0; i < i_op; i++) {
         switch (operations[i]) {
             case SMULT:
@@ -802,17 +734,15 @@ DataType handle_term() {
 
     free(operations);
 
-    if (type_to_return == INT || type_to_return == BOOL) {
+    if (type_to_return == TYPE_INT || type_to_return == TYPE_BOOL) {
         return type_to_return;
     } else {
-        return type1; // Retorna o tipo do fator se não houve operação.
+        return type1; 
     }
 }
 
 /**
- * @brief Analisa um fator: <fator> ::= (<variável> | <número> | <chamada de função> | (<expressão>) | verdadeiro | falso | nao <fator>)
- * * Trata o menor nível de expressões.
- * * @return DataType O tipo de dado do fator.
+ * @brief Analisa um fator
  */
 DataType handle_factor() {
     switch (current_token.symbol) {
@@ -821,22 +751,20 @@ DataType handle_factor() {
                 SymbolNode * node = get_symbol_from_lexem(current_token.lexem);
                 
                 if (node != NULL) {
-                    if (node->structure_type == FUNC) { // É uma função
+                    if (node->structure_type == FUNC) { 
                         handle_function_call(node);
                     } 
-                    else if (node->structure_type == VAR) { // É uma variável
+                    else if (node->structure_type == VAR) { 
                         handle_variable(node);
                     }
                     else {
-                        // Erro Semântico: Identificador existe, mas não é VAR nem FUNC (ex: nome de procedimento ou programa)
                         fprintf(stderr, "ERRO SEMANTICO na linha %d: %s não é uma variável ou função\n", current_line, current_token.lexem);
                         fflush(stderr);
                         exit(EXIT_FAILURE);
                     }
-                    return node->data_type; // Retorna o tipo do símbolo.
+                    return node->data_type; 
                 }
                 else {
-                    // Erro Semântico: Símbolo não existe.
                     fprintf(stderr, "ERRO SEMANTICO na linha %d: %s não existe\n", current_line, current_token.lexem);
                     fflush(stderr);
                     exit(EXIT_FAILURE);
@@ -844,26 +772,22 @@ DataType handle_factor() {
             }
             break;
         case SNUMERO:
-            // Geração de Código: Carrega a constante na pilha.
             generate(-1, "LDC  ", atoi(current_token.lexem), -1);
             get_next_token();
-            return INT;
+            return TYPE_INT;
         case SVERDADEIRO:
-            // Geração de Código: Carrega a constante booleana 'verdadeiro' (1).
             generate(-1, "LDC  ", 1, -1);
             get_next_token();
-            return BOOL;
+            return TYPE_BOOL;
         case SFALSO:
-            // Geração de Código: Carrega a constante booleana 'falso' (0).
             generate(-1, "LDC  ", 0, -1);
             get_next_token();
-            return BOOL;
-        case SNAO: // Operador NOT
+            return TYPE_BOOL;
+        case SNAO: 
             get_next_token();
-            // Checagem Semântica: 'nao' deve ser usado com tipo BOOL.
-            if (handle_factor() == BOOL) {
-                generate(-1, "NEG  ", -1, -1); // Geração de Código: Negação lógica
-                return BOOL;
+            if (handle_factor() == TYPE_BOOL) {
+                generate(-1, "NEG  ", -1, -1); 
+                return TYPE_BOOL;
             }
             else {
                 fprintf(stderr, "ERRO SEMANTICO na linha %d: operador \"n\" não usado com inteiro\n", current_line);
@@ -872,7 +796,7 @@ DataType handle_factor() {
             }
         case SABRE_PARENTESES:
             get_next_token();
-            DataType tipo = handle_expression(); // Analisa expressão dentro de parênteses
+            DataType tipo = handle_expression(); 
 
             if (current_token.symbol != SFECHA_PARENTESES) {
                 print_sintax_error(")");
@@ -884,19 +808,17 @@ DataType handle_factor() {
             fflush(stderr);
             exit(EXIT_FAILURE);
     }
+    return UNDEFINED;
 }
 
 /**
- * @brief Analisa o comando de atribuição: <comando atribuicao>::= <identificador> := <expressão>
- * * O identificador já foi reconhecido na chamada a `handle_assignment_chprocedure`.
- * * @param aux O Token do identificador a ser atribuído.
+ * @brief Analisa o comando de atribuição
  */
 void handle_assignment_command(Token aux) {
     get_next_token();
 
     SymbolNode * obj_to_assign_value = get_symbol_from_lexem(aux.lexem);
 
-    // Checagem Semântica: Verifica a compatibilidade de tipos na atribuição.
     DataType t1 = handle_expression();
     DataType t2 = obj_to_assign_value->data_type;
 
@@ -906,53 +828,32 @@ void handle_assignment_command(Token aux) {
         exit(EXIT_FAILURE);
     } 
 
-    // Geração de Código: Armazena o valor da expressão no endereço de memória do símbolo.
     if (obj_to_assign_value->structure_type == FUNC) {
-        // Atribuição ao resultado da função (endereço 0)
         generate(-1, "STR  ", 0, -1);
     } else {
-        // Atribuição a uma variável local/global
         generate(-1, "STR  ", obj_to_assign_value->mem, -1);
     }
 }
 
-/**
- * @brief Analisa a chamada de procedimento: <chamada de procedimento>::= <identificador>
- * * @param aux O Token do identificador do procedimento.
- */
 void handle_procedure_call(Token aux) {
     SymbolNode * node = get_symbol_from_lexem(aux.lexem);
     if (node != NULL) {
         generate(-1, "CALL ", node->mem, -1);
     }
     else {
-        // Erro Semântico: Identificador não existe.
         fprintf(stderr, "ERRO SEMANTICO na linha %d: identificador %s não existe\n", current_line, aux.lexem);
         fflush(stderr);
         exit(EXIT_FAILURE);
     }
 }
 
-/**
- * @brief Analisa a utilização de uma variável em uma expressão: <variável> ::= <identificador>
- * * @param node O nó do símbolo da variável.
- */
 void handle_variable(SymbolNode * node) {
-    // Geração de Código: Carrega o valor da variável na pilha.
     generate(-1, "LDV  ", node->mem, -1);
-
     get_next_token();
 }
 
-/**
- * @brief Analisa a chamada de função em uma expressão: <chamada de função> ::= <identificador>
- * * @param node O nó do símbolo da função.
- */
 void handle_function_call(SymbolNode * node) {
-    // Geração de Código: Chama a função.
     generate(-1, "CALL ", node->mem, -1);
-    // Geração de Código: Carrega o resultado da função (endereço 0) na pilha.
     generate(-1, "LDV  ", 0, -1);
-
     get_next_token();
 }

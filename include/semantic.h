@@ -1,13 +1,13 @@
-
 #ifndef SEMANTIC_H
 #define SEMANTIC_H
 
 #pragma once
 #include "includes.h"
 
+// ALTERADO: INT -> TYPE_INT e BOOL -> TYPE_BOOL para evitar conflito com windows.h
 typedef enum {
-    INT,
-    BOOL,
+    TYPE_INT,
+    TYPE_BOOL,
     UNDEFINED
 } DataType;
 
