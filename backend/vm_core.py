@@ -235,7 +235,14 @@ class VM:
                 # cuidado com divisão por zero (vai lançar se M[sp] == 0)
                 if M.get(sp, 0) == 0:
                     raise VMError("Divisão por zero")
-                M[sp - 1] = M.get(sp - 1, 0) // M.get(sp, 0)
+                a = M.get(sp - 1, 0)
+                b = M.get(sp, 0)
+
+                M[sp - 1] =  abs(b) // abs(a)
+
+                if (a > 0 and b < 0) or (a < 0 and b > 0):
+                    M[sp - 1] = -M[sp - 1]
+
                 pop_M()
 
             elif opcode == "INV":

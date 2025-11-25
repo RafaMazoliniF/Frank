@@ -3,11 +3,37 @@ const { spawn } = require("child_process");
 const path = require("path");
 
 let backend;
+const isWindows = process.platform === 'win32';
 
-// 🔹 POP-UP DE INPUT PARA RD
+function startBackend() {
+  const exePath = app.isPackaged
+    ? path.join(process.resourcesPath, "backend", "app.exe")
+    : path.join(__dirname, "..", "backend", "app.exe");
+
+  backend = spawn(exePath, [], {
+    cwd: path.dirname(exePath),
+    detached: false,
+    stdio: "ignore",
+  });
+
+  backend.on('error', (err) => {
+    console.error('Backend error:', err);
+  });
+}
+
+function killBackend() {
+  if (backend && !backend.killed) {
+    if (isWindows) {
+      spawn('taskkill', ['/pid', backend.pid, '/f', '/t']);
+    } else {
+      backend.kill('SIGTERM');
+    }
+    backend = null;
+  }
+}
+
 ipcMain.handle("ask-input", async (_, message) => {
   return new Promise((resolve) => {
-
     const win = new BrowserWindow({
       width: 400,
       height: 200,
@@ -15,8 +41,8 @@ ipcMain.handle("ask-input", async (_, message) => {
       parent: BrowserWindow.getFocusedWindow(),
       webPreferences: {
         nodeIntegration: true,
-        contextIsolation: false
-      }
+        contextIsolation: false,
+      },
     });
 
     win.loadFile(path.join(__dirname, "inputWindow.html"));
@@ -25,28 +51,15 @@ ipcMain.handle("ask-input", async (_, message) => {
       win.webContents.send("set-message", message);
     });
 
-    ipcMain.once("input-value", (_, value) => {
+    const listener = (_, value) => {
       resolve(value);
-    });
+      ipcMain.removeListener("input-value", listener);
+      win.close();
+    };
+
+    ipcMain.on("input-value", listener);
   });
 });
-
-
-function startBackend() {
-  const exePath = app.isPackaged
-    ? path.join(process.resourcesPath, "backend", "app.exe")
-    : path.join(__dirname, "..", "backend", "app.exe");
-
-  console.log("Iniciando backend:", exePath);
-
-  backend = spawn(exePath, [], {
-    cwd: path.dirname(exePath),
-    detached: true,
-    stdio: "ignore",
-  });
-
-  backend.unref();
-}
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -64,13 +77,22 @@ function createWindow() {
     : `file://${path.join(__dirname, "..", "frontend", "index.html")}`;
 
   win.loadURL(indexPath);
+
+  win.on("closed", () => {
+    killBackend();
+  });
 }
 
 app.whenReady().then(() => {
   startBackend();
-  setTimeout(createWindow, 1000);
+  setTimeout(createWindow, 700);
 });
 
 app.on("window-all-closed", () => {
+  killBackend();
   app.quit();
+});
+
+app.on('before-quit', () => {
+  killBackend();
 });

@@ -112,36 +112,41 @@ async function step() {
 // RUN
 // ------------------------
 async function run() {
-  const r = await api('/run', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({ limit: 1000000 })
-  });
 
-  if (r.status === 'error' &&
-      r.message.toLowerCase().includes('rd attempted')) {
+  while (true) {
+    const r = await api('/run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ limit: 1000000 })
+    });
 
-    const val = await window.electronAPI.askInput("Digite um valor para RD:");
+    // Caso o backend peça RD
+    if (r.status === 'error' &&
+        r.message.toLowerCase().includes('rd attempted')) {
 
-    if (val !== null) {
+      const val = await window.electronAPI.askInput("Digite um valor para RD:");
+
+      // Se o usuário fechar a janela ou cancelar
+      if (val === null) {
+        log("Input cancelado.");
+        return;
+      }
+
+      // Envia o valor para o backend
       await api('/input', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ value: val })
       });
 
-      const again = await api('/run', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ limit: 1000000 })
-      });
-
-      updateFromSnapshot(again.snapshot);
-      return;
+      // 🔥 E continua a execução automaticamente
+      continue;
     }
-  }
 
-  updateFromSnapshot(r.snapshot);
+    // Quando não tiver RD → fim do programa / execução normal
+    updateFromSnapshot(r.snapshot);
+    break;
+  }
 }
 
 // ------------------------
