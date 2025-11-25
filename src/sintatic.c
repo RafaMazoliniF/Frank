@@ -680,70 +680,61 @@ DataType handle_simple_expression() {
     return ref; 
 }
 
-/**
- * @brief Analisa termos (multiplicativos: *, /, e).
- */
 DataType handle_term() {
+
     DataType type1 = handle_factor();
-    
-    // Alocação para armazenar os operadores encontrados
+
+    Simbolo s = current_token.symbol;
+
     Simbolo * operations = (Simbolo*)malloc(100 * sizeof(Simbolo));
     int i_op = 0;
+
     DataType type_to_return = -1;
 
-    // Loop de análise sintática e semântica
     while(current_token.symbol == SMULT || current_token.symbol == SDIV || current_token.symbol == SE) {
-        // Armazena o operador atual
-        Simbolo current_op = current_token.symbol;
-        operations[i_op] = current_op;
+        operations[i_op] = current_token.symbol;
         i_op++;
 
         get_next_token();
-        DataType type2 = handle_factor();
-        
-        // Verificação Semântica
-        if (current_op == SMULT || current_op == SDIV) {
+        DataType type2 = handle_factor();        
+
+        // Semântica: Validação Aritmética vs Lógica
+        if (s == SMULT || s == SDIV) {
             if (type1 != TYPE_INT || type2 != TYPE_INT) {
                 fprintf(stderr, "ERRO SEMANTICO na linha %d: operação numérica com booleano\n", current_line);
                 fflush(stderr);
                 exit(EXIT_FAILURE);
-            } else {
+            }
+            else {
                 type_to_return = TYPE_INT; 
             }
         }
-        else { // Operação SE (AND)
+        else {
             if (type1 != TYPE_BOOL || type2 != TYPE_BOOL) {
                 fprintf(stderr, "ERRO SEMANTICO na linha %d: operação lógica com inteiro\n", current_line);
                 fflush(stderr);
                 exit(EXIT_FAILURE);
-            } else {
+            }
+            else {
                 type_to_return = TYPE_BOOL; 
             }
         }
+        s = current_token.symbol;
     }
 
-    // Pass 1: Gera código para MULTIPLICAÇÕES (prioridade alta)
     for (int i = 0; i < i_op; i++) {
-        if (operations[i] == SMULT) {
-            generate(-1, "MULT ", -1, -1);
-            // Marca como processado para não gerar novamente no próximo loop
-            operations[i] = 0; 
-        }
-    }
-
-    // Pass 2: Gera código para DIVISÕES e AND (prioridade normal)
-    for (int i = 0; i < i_op; i++) {
-        if (operations[i] != 0) { // Se não foi processado
-            switch (operations[i]) {
-                case SDIV:
-                    generate(-1, "DIVI ", -1, -1);
-                    break;
-                case SE:
-                    generate(-1, "AND  ", -1, -1);
-                    break;
-                default:
-                    break;
-            }
+        switch (operations[i]) {
+            case SMULT:
+                generate(-1, "MULT ", -1, -1);
+                break;
+            case SDIV:
+                generate(-1, "DIVI ", -1, -1);
+                break;
+            case SE:
+                generate(-1, "AND  ", -1, -1);
+                break;
+            default:
+                break;
         }
     }
 
@@ -754,6 +745,7 @@ DataType handle_term() {
     } else {
         return type1; 
     }
+
 }
 
 /**
